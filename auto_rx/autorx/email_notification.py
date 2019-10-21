@@ -14,6 +14,7 @@ from email.utils import formatdate
 from threading import Thread
 from .config import read_auto_rx_config
 from .utils import position_info
+import socket
 
 try:
     # Python 2
@@ -99,6 +100,9 @@ class EmailNotification(object):
 
         if _id not in self.sondes:
             try:
+                hostname = socket.gethostname();
+                myIp=(([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
+
                 # This is a new sonde. Send the email.
                 msg  = 'Sonde launch detected:\n'
                 msg += '\n'
@@ -111,7 +115,7 @@ class EmailNotification(object):
                 msg += 'Frequency: %s\n' % telemetry['freq']
                 msg += 'Position:  %.5f,%.5f\n' % (telemetry['lat'], telemetry['lon'])
                 msg += 'Altitude:  %d m\n' % round(telemetry['alt'])
-
+                
                 if self.station_position != None:
                     _relative_position = position_info(self.station_position, (telemetry['lat'], telemetry['lon'], telemetry['alt']))
                     msg += 'Range:  %.1f km\n' % (_relative_position['straight_distance']/1000.0)
@@ -120,9 +124,9 @@ class EmailNotification(object):
                 msg += '\n'
                 #msg += 'https://tracker.habhub.org/#!qm=All&q=RS_%s\n' % _id
                 msg += 'https://sondehub.org/%s\n' % _id
-
+                msg += 'http://' + myIp + ':5000\n'
                 # Construct subject
-                _subject = self.mail_subject
+                _subject = "[" + hostname + "] " + self.mail_subject
                 _subject = _subject.replace('<id>', telemetry['id'])
                 _subject = _subject.replace('<type>', telemetry['type'])
                 _subject = _subject.replace('<freq>', telemetry['freq'])
