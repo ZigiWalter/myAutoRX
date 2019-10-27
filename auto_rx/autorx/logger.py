@@ -129,6 +129,12 @@ class TelemetryLogger(object):
             telemetry['freq_float'])
 
         # Other fields that may not always be present.
+        if 'snr' in telemetry:
+            _log_line += ",SNR %.1f" % telemetry['snr']
+
+        if 'f_error' in telemetry:
+            _log_line += ",FERROR %d" % int(telemetry['f_error'])
+
         if 'sats' in telemetry:
             _log_line += ",SATS %d" % telemetry['sats']
 
@@ -201,7 +207,7 @@ class TelemetryLogger(object):
 
         _now = time.time()
 
-        for _id in self.open_logs.keys():
+        for _id in self.open_logs.copy().keys():
             try:
                 if _now > (self.open_logs[_id]['last_time'] + self.FILE_ACTIVITY_TIMEOUT):
                     # Flush and close the log file, and pop this element from the dictionary.
