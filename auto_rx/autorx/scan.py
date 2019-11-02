@@ -568,7 +568,7 @@ class SondeScanner(object):
 
             except (IOError, ValueError) as e:
                 # No log file produced. Reset the RTLSDR and try again.
-                #traceback.print_exc()
+                traceback.print_exc()
                 self.log_warning("RTLSDR produced no output... resetting and retrying.")
                 self.error_retries += 1
                 # Attempt to reset the RTLSDR.
@@ -685,9 +685,13 @@ class SondeScanner(object):
             peak_frequencies = peak_frequencies[np.sort(peak_idx)]
 
 
+            # Blacklist & Temporary block list behaviour change as of v1.2.3
+            # Was: peak_frequencies==_frequency   (This only matched an exact frequency in the blacklist)
+            # Now (1.2.3): Block if the peak frequency is within +/-quantization/2.0 of a blacklist or blocklist frequency.
+
             # Remove any frequencies in the blacklist.
             for _frequency in np.array(self.blacklist)*1e6:
-                _index = np.argwhere(peak_frequencies==_frequency)
+                _index = np.argwhere(np.abs(peak_frequencies-_frequency) < (self.quantization/2.0))
                 peak_frequencies = np.delete(peak_frequencies, _index)
 
             # Limit to the user-defined number of peaks to search over.
@@ -708,9 +712,14 @@ class SondeScanner(object):
                     # We should still be blocking this frequency, so remove any peaks with this frequency.
                     #Zigi
                     #_index = np.argwhere(peak_frequencies==_frequency)
-                    _index = np.argwhere(abs(peak_frequencies-_frequency)<=self.quantization)
-                    #self.log_info("Removing peaks: %s" % (peak_frequencies[_index]/1e6))
-                    blockedPeakList.append(peak_frequencies[_index]);
+                    #_index = np.argwhere(abs(peak_frequencies-_frequency)<=self.quantization)
+		    _index = np.argwhere(np.abs(peak_frequencies-_frequency) < (self.quantization/2.0))
+                    #print("ZZZ: %s" %type(peak_frequencies))
+                    #print("ZZZ: %s" %str(peak_frequencies))
+                    #print("ZZZ: %s" %type((peak_frequencies[_index][0]).tolist()))
+                    blockedPeakList.append(_frequency/1e6)
+#self.log_info("Removing peaks: %s" % (peak_frequencies[_index]/1e6))
+                    #%blockedPeakList.append(float(str(peak_frequencies[_index].tolist())));
                     peak_frequencies = np.delete(peak_frequencies, _index)
                     if len(_index) > 0:
                         self.log_debug("Peak on %.3f MHz was removed due to temporary block." % (_frequency/1e6))

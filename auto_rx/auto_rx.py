@@ -101,7 +101,7 @@ def allocate_sdr(check_only = False, task_description = ""):
 def start_scanner():
     """ Start a scanner thread on the first available SDR """
     global config, RS_PATH, temporary_block_list
-
+    
     if 'SCAN' in autorx.task_list:
         # Already a scanner running! Return.
         logging.debug("Task Manager - Attempted to start a scanner, but one already running.")
@@ -345,7 +345,16 @@ def clean_task_list():
                 # If there is a scanner currently running, add it to the scanners internal block list.
                 if 'SCAN' in autorx.task_list:
                     autorx.task_list['SCAN']['task'].add_temporary_block(_key)
-
+            #Zigi
+            elif _exit_state == "Lockout":
+                # This task was a decoder, and it has encountered an locked-out sonde.
+                logging.info("Task Manager - Adding temporary lockout for frequency %.3f MHz" % (_key/1e6))
+                # Add the sonde's frequency to the global temporary block-list
+                temporary_block_list[_key] = time.time()
+                # If there is a scanner currently running, add it to the scanners internal block list.
+                if 'SCAN' in autorx.task_list:
+                    autorx.task_list['SCAN']['task'].add_temporary_block(_key)
+                    
 
             # Release its associated SDR.
             autorx.sdr_list[_task_sdr]['in_use'] = False
@@ -744,7 +753,7 @@ def main():
 
 if __name__ == "__main__":
 
-    try:
+    try: 
         main()
     except KeyboardInterrupt:
         # Upon CTRL+C, shutdown all threads and exit.

@@ -156,7 +156,8 @@ class SondeDecoder(object):
         self.decoder = None
 
         self.exit_state = "OK"
-
+        #Zigi
+        self.firstPacket=0
         # Detect if we have an 'inverted' sonde.
         if self.sonde_type.startswith('-'):
             self.inverted = True
@@ -685,14 +686,20 @@ class SondeDecoder(object):
                     # If we decoded a valid JSON blob, update our last-packet time.
                     if _ok:
                         _last_packet = time.time()
-
-
+                        if self.firstPacket==0:
+                            self.firstPacket=time.time()
+                
             # Check timeout counter.
             if time.time() > (_last_packet + self.timeout):
                 # If we have not seen data for a while, break.
                 self.log_error("RX Timed out.")
                 self.exit_state = "Timeout"
                 break
+            #Zigi
+            #elif(self.exit_state == "Lockout"):
+            #    self.log_info("Lockedout sonde")
+            #    #self.exit_state = "Lockout"
+            #    break
             else:
                 # Otherwise, sleep for a short time.
                 time.sleep(0.1)
@@ -785,7 +792,8 @@ class SondeDecoder(object):
                     self.exit_state = "Encrypted"
                     self.decoder_running = False
                     return False
-
+   
+                    
             # Check the datetime field is parseable.
             try:
                 _telemetry['datetime_dt'] = parse(_telemetry['datetime'])
@@ -863,7 +871,13 @@ class SondeDecoder(object):
                     self.log_error("Failed to run telemetry filter - %s" % str(e))
                     _telem_ok = True
 
-
+            #Zigi
+            if(self.isLockedout(_telemetry)):
+                self.log_info("Locked out sonde: %.3fMHz, (%.6f,%.6f)" % (self.sonde_freq/1e6,_telemetry['lat'],_telemetry['lon']))
+                self.exit_state = "Lockout"
+                self.decoder_running=False;
+                return False
+            
             # If the telemetry is OK, send to the exporter functions (if we have any).
             if self.exporters is None:
                 return
@@ -875,6 +889,7 @@ class SondeDecoder(object):
                         except Exception as e:
                             self.log_error("Exporter Error %s" % str(e))
 
+            
             return _telem_ok
 
 
@@ -919,6 +934,25 @@ class SondeDecoder(object):
             bool: True if the decoder subprocess is running.
         """
         return self.decoder_running
+
+    #Zigi
+    def isLockedout(self, telemetry):
+        #global myDB
+        #locekdOutDB[t)]=telemetry['lon']
+        #logging.info("ZZZ: %d" % len(myDB))
+        #return False
+        if((self.firstPacket==0) or ((time.time()-self.firstPacket)<30)):
+            return False
+        northWest = (33.550000, 34.700000)
+        southEast = (30.800000, 37.200000)
+        #northWest = (33.389341, 34.538769)
+        #southEast = (31.473511, 36.926776)
+        #logging.info("Decoder Lock-out n #%s %s %.3f - %s" % (str(self.device_idx), self.sonde_type, self.sonde_freq/1e6, telemetry))
+        #_payload = (telemetry['lat'], telemetry['lon'], telemetry['alt'])
+        if((telemetry['lat']>southEast[0]) and (telemetry['lat']<northWest[0]) and (telemetry['lon']<southEast[1]) and (telemetry['lon']>northWest[1])):        
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":
