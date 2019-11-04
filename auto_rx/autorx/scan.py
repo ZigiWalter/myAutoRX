@@ -755,7 +755,7 @@ class SondeScanner(object):
             # Tell the web client we have new data.
             flask_emit_event('scan_event')
 
-            if len(peak_frequencies) == 0:
+            if ((len(peak_frequencies) == 0) and (len(blockedPeakList) == 0)):
                 self.log_debug("No peaks found after blacklist frequencies removed.")
                 return []
             else:
