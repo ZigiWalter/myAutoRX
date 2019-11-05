@@ -141,8 +141,8 @@ def read_auto_rx_config(filename, no_sdr_test=False):
 		# from using the habhub.org tracker, and leave it for use by High-Altitude Balloon Hobbyists.
 		# For now, sondehub.org just acts as a proxy to habhub.org.
 		# This setting is not exposed to users as it's only used for unit/int testing
-		'habitat_url': "https://habitat.sondehub.org/"
-
+		'habitat_url': "https://habitat.sondehub.org/",
+                'geo_filter_enable' : False
 	}
 
 
@@ -195,6 +195,7 @@ def read_auto_rx_config(filename, no_sdr_test=False):
 		# Position Filtering
 		auto_rx_config['max_altitude'] = config.getint('filtering', 'max_altitude')
 		auto_rx_config['max_radius_km'] = config.getint('filtering', 'max_radius_km')
+		auto_rx_config['geo_filter_enable'] = config.getboolean('filtering', 'geo_filter_enable')
 
 		# Habitat Settings
 		auto_rx_config['habitat_enabled'] = config.getboolean('habitat', 'habitat_enabled')

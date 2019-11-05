@@ -91,6 +91,7 @@ class SondeDecoder(object):
         rs92_ephemeris = None,
         rs41_drift_tweak = False,
         experimental_decoder = False,
+        geo_filter_enable = False,
         imet_location = "SONDE"):
         """ Initialise and start a Sonde Decoder.
 
@@ -144,6 +145,7 @@ class SondeDecoder(object):
         self.rs92_ephemeris = rs92_ephemeris
         self.rs41_drift_tweak = rs41_drift_tweak
         self.experimental_decoder = experimental_decoder
+        self.geo_filter_enable = geo_filter_enable
         self.imet_location = imet_location
 
         # iMet ID store. We latch in the first iMet ID we calculate, to avoid issues with iMet-1-RS units
@@ -941,6 +943,8 @@ class SondeDecoder(object):
         #locekdOutDB[t)]=telemetry['lon']
         #logging.info("ZZZ: %d" % len(myDB))
         #return False
+        if (not self.geo_filter_enable):
+            return False
         if((self.firstPacket==0) or ((time.time()-self.firstPacket)<30)):
             return False
         northWest = (33.550000, 34.700000)
