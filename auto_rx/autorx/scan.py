@@ -92,7 +92,7 @@ def run_rtl_power(start, stop, step, filename="log_power.csv", dwell = 20, sdr_p
 
     logging.info("Scanner #%s - Running frequency scan." % str(device_idx))
     logging.debug("Scanner #%s - Running command: %s" % (str(device_idx), rtl_power_cmd))
-
+        
     try:
         _output = subprocess.check_output(rtl_power_cmd, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
@@ -415,6 +415,8 @@ class SondeScanner(object):
         save_detection_audio = False,
         temporary_block_list = {},
         temporary_block_time = 60,
+        detect_attemp_list = [],
+        enable_peak_reorder = False,
         ngp_tweak = False):
         """ Initialise a Sonde Scanner Object.
 
@@ -485,6 +487,8 @@ class SondeScanner(object):
         self.temporary_block_list_lock = Lock()
         self.temporary_block_time = temporary_block_time
 
+        self.detect_attemp_list = detect_attemp_list
+        self.enable_peak_reorder = enable_peak_reorder
         # Alert the user if there are temporary blocks in place.
         if len(self.temporary_block_list.keys())>0:
             self.log_info("Temporary blocks in place for frequencies: %s" % str(self.temporary_block_list.keys()))
@@ -511,7 +515,7 @@ class SondeScanner(object):
             return
 
         self.exit_state = "OK"
-
+        
         if auto_start:
             self.start()
 
@@ -619,7 +623,6 @@ class SondeScanner(object):
                 i.e. [[402500000,'RS41'],[402040000,'RS92']]
         """
         global scan_result
-
         _search_results = []
 
         if len(self.whitelist) == 0 :
@@ -676,7 +679,10 @@ class SondeScanner(object):
             peak_powers = power[peak_indices]
             peak_freqs = freq[peak_indices]
             peak_frequencies = peak_freqs[np.argsort(peak_powers)][::-1]
-
+            
+            #print(str(peak_frequencies))
+            #print(type(peak_frequencies))
+            #print(peak_frequencies.shape) 
             # Quantize to nearest x Hz
             peak_frequencies = np.round(peak_frequencies/self.quantization)*self.quantization
 
@@ -731,6 +737,22 @@ class SondeScanner(object):
 
             self.temporary_block_list_lock.release()
 
+            #Zigi
+            if(self.enable_peak_reorder):
+                #Reorder list moving recently decoded frequencies to the end
+                print("detect_attemp_list:"+ str(np.array(self.detect_attemp_list)/1e6))
+                print("peak_frequencies before: " +str(np.array(peak_frequencies)/1e6))
+                
+                for pFreq in self.detect_attemp_list:
+                    _index = np.argwhere(np.abs(peak_frequencies-pFreq) <= (self.quantization))
+                    #print("Found " +str(pFreq) + " in index:\n" + str(_index))
+                    items=peak_frequencies[_index]
+                    #print("removing items:\n" +str(items))                    
+                    peak_frequencies=np.delete(peak_frequencies, _index)
+                    peak_frequencies=np.append(peak_frequencies,items)
+                    #print("peak_frequencies: " +str(peak_frequencies))
+                print("peak_frequencies After:  " +str(peak_frequencies/1e6)+"\n")
+
             # Get the level of our peak search results, to send to the web client.
             # This is actually a bit of a pain to do...
             _peak_freq = []
@@ -771,11 +793,12 @@ class SondeScanner(object):
         for freq in peak_frequencies:
 
             _freq = float(freq)
-
+                
             # Exit opportunity.
             if self.sonde_scanner_running == False:
                 return []
-
+            
+                
             (detected, offset_est) = detect_sonde(_freq,
                 sdr_fm=self.sdr_fm,
                 device_idx=self.device_idx,

@@ -92,6 +92,7 @@ class SondeDecoder(object):
         rs41_drift_tweak = False,
         experimental_decoder = False,
         geo_filter_enable = False,
+        decode_limit_period = 0,
         imet_location = "SONDE"):
         """ Initialise and start a Sonde Decoder.
 
@@ -146,6 +147,7 @@ class SondeDecoder(object):
         self.rs41_drift_tweak = rs41_drift_tweak
         self.experimental_decoder = experimental_decoder
         self.geo_filter_enable = geo_filter_enable
+        self.decode_limit_period = decode_limit_period
         self.imet_location = imet_location
 
         # iMet ID store. We latch in the first iMet ID we calculate, to avoid issues with iMet-1-RS units
@@ -879,6 +881,12 @@ class SondeDecoder(object):
                 self.exit_state = "Lockout"
                 self.decoder_running=False;
                 return False
+            
+            if((self.decode_limit_period>0) and (self.firstPacket>0) and ((time.time()-self.firstPacket)>(self.decode_limit_period*60))):
+                self.log_info("Reached decode limit period: %.3fMHz, (%.6f,%.6f)" % (self.sonde_freq/1e6,_telemetry['lat'],_telemetry['lon']))
+                self.exit_state = "LIMIT"
+                self.decoder_running=False;
+                return False  
             
             # If the telemetry is OK, send to the exporter functions (if we have any).
             if self.exporters is None:

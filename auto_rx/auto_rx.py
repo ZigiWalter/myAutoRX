@@ -16,7 +16,7 @@ import sys
 import time
 import traceback
 import os
-
+import numpy as np
 import autorx
 from autorx.scan import SondeScanner
 from autorx.decode import SondeDecoder, VALID_SONDE_TYPES, DRIFTY_SONDE_TYPES
@@ -69,7 +69,8 @@ gpsd_adaptor = None
 # This contains frequncies that should be blocked for a short amount of time.
 temporary_block_list = {}
 
-
+#Zigi
+detect_attemp_list = []
 
 def allocate_sdr(check_only = False, task_description = ""):
     """ Allocate an un-used SDR for a task.
@@ -101,6 +102,7 @@ def allocate_sdr(check_only = False, task_description = ""):
 def start_scanner():
     """ Start a scanner thread on the first available SDR """
     global config, RS_PATH, temporary_block_list
+    global detect_attemp_list
     
     if 'SCAN' in autorx.task_list:
         # Already a scanner running! Return.
@@ -142,7 +144,9 @@ def start_scanner():
             bias = autorx.sdr_list[_device_idx]['bias'],
             save_detection_audio = config['save_detection_audio'],
             temporary_block_list = temporary_block_list,
-            temporary_block_time = config['temporary_block_time']
+            temporary_block_time = config['temporary_block_time'],
+            detect_attemp_list = detect_attemp_list,
+            enable_peak_reorder = config['decode_limit_period']>0          
             )
 
         # Add a reference into the sdr_list entry
@@ -181,7 +185,8 @@ def start_decoder(freq, sonde_type):
 
     """
     global config, RS_PATH, exporter_functions, rs92_ephemeris, temporary_block_list
-
+    global detect_attemp_list
+    
     # Allocate a SDR.
     _device_idx = allocate_sdr(task_description="Decoder (%s, %.3f MHz)" % (sonde_type, freq/1e6))
 
@@ -219,7 +224,8 @@ def start_decoder(freq, sonde_type):
             imet_location = config['station_code'],
             rs41_drift_tweak = config['rs41_drift_tweak'],
             experimental_decoder = config['experimental_decoders'][_exp_sonde_type],
-            geo_filter_enable = config['geo_filter_enable']
+            geo_filter_enable = config['geo_filter_enable'],
+            decode_limit_period = config['decode_limit_period']
             )
         autorx.sdr_list[_device_idx]['task'] = autorx.task_list[freq]['task']
 
@@ -236,6 +242,7 @@ def handle_scan_results():
     - If there is no free SDR, but a scanner is running, stop the scanner and start decoding.
     """
     global config, temporary_block_list
+    global detect_attemp_list
 
     if autorx.scan_results.qsize() > 0:
         # Grab the latest detections from the scan result queue.
@@ -324,7 +331,7 @@ def handle_scan_results():
 
 def clean_task_list():
     """ Check the task list to see if any tasks have stopped running. If so, release the associated SDR """
-
+    global detect_attemp_list
     for _key in autorx.task_list.copy().keys():
         # Attempt to get the state of the task
         try:
@@ -355,8 +362,21 @@ def clean_task_list():
                 # If there is a scanner currently running, add it to the scanners internal block list.
                 if 'SCAN' in autorx.task_list:
                     autorx.task_list['SCAN']['task'].add_temporary_block(_key)
-                    
-
+            #Zigi
+            #elif _exit_state == "LIMIT":
+            # This task was a decoder, and it has encountered an locked-out sonde.
+            if (config['decode_limit_period']>0):
+                logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
+                _index = np.argwhere(np.abs(np.array(detect_attemp_list)-_key)<(10000/2.0))
+                detect_attemp_np = np.delete(detect_attemp_list, _index)
+                detect_attemp_list = detect_attemp_np.tolist()
+                detect_attemp_list.append(_key)
+                
+                if len(detect_attemp_list) > config['max_peaks']: #self.max_peaks:
+                    detect_attemp_list = detect_attemp_list[-config['max_peaks']:]
+                
+                print("New detect_attemp_list:"+ str(np.array(detect_attemp_list)/1e6))
+            
             # Release its associated SDR.
             autorx.sdr_list[_task_sdr]['in_use'] = False
             autorx.sdr_list[_task_sdr]['task'] = None
