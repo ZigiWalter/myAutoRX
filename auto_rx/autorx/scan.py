@@ -740,8 +740,9 @@ class SondeScanner(object):
             #Zigi
             if(self.enable_peak_reorder):
                 #Reorder list moving recently decoded frequencies to the end
-                print("detect_attemp_list:"+ str(np.array(self.detect_attemp_list)/1e6))
-                print("peak_frequencies before: " +str(np.array(peak_frequencies)/1e6))
+                if(len(peak_frequencies)>0):
+                    print("detect_attemp_list:"+ str(np.array(self.detect_attemp_list)/1e6))
+                    print("peak_frequencies before: " +str(np.array(peak_frequencies)/1e6))
                 
                 for pFreq in self.detect_attemp_list:
                     _index = np.argwhere(np.abs(peak_frequencies-pFreq) <= (self.quantization))
@@ -751,7 +752,8 @@ class SondeScanner(object):
                     peak_frequencies=np.delete(peak_frequencies, _index)
                     peak_frequencies=np.append(peak_frequencies,items)
                     #print("peak_frequencies: " +str(peak_frequencies))
-                print("peak_frequencies After:  " +str(peak_frequencies/1e6)+"\n")
+                if(len(peak_frequencies)>0):    
+                    print("peak_frequencies After:  " +str(peak_frequencies/1e6)+"\n")
 
             # Get the level of our peak search results, to send to the web client.
             # This is actually a bit of a pain to do...
