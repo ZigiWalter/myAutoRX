@@ -155,7 +155,7 @@ class SondeDecoder(object):
         # This is a tradeoff between being able to handle multiple iMet sondes on a single frequency, and
         # not flooding the various databases with sonde IDs in the case of a bad sonde.
         self.imet_id = None
-
+        self.imet_firstPacket = None
         # This will become our decoder thread.
         self.decoder = None
 
@@ -825,7 +825,6 @@ class SondeDecoder(object):
             if 'aux' in _telemetry:
                 _telemetry['type'] += "-Ozone"
 
-
             # iMet Specific actions
             if self.sonde_type == 'iMet':
                 # Check we have GPS lock.
@@ -840,11 +839,20 @@ class SondeDecoder(object):
                 # Generate a unique ID based on the power-on time and frequency, as iMet sondes don't send one.
                 # Latch this ID and re-use it for the entire decode run.
                 if self.imet_id == None:
-                    self.imet_id = imet_unique_id(_telemetry, custom=self.imet_location)
-                
+                    if self.imet_firstPacket == None:
+                        self.imet_firstPacket=(_telemetry['frame'],_telemetry['datetime_dt'])
+                        return False;
+                    else:
+                        (f1,t1)=self.imet_firstPacket                 
+                        (f2,t2)=(_telemetry['frame'],_telemetry['datetime_dt'])
+                        #print("f1:" + str(f1) +" t1:" + str(t1))
+                        #print("f2:" + str(f2) +" t2:" + str(t2))
+                        rate=(f2-f1)/((t2-t1).total_seconds())
+                        #print("rate:"+str(rate))               
+                        self.imet_id = imet_unique_id(_telemetry, custom=self.imet_location, framRate=rate)
+                        #print("ID: " + self.imet_id)
                 _telemetry['id'] = self.imet_id
                 _telemetry['station_code'] = self.imet_location
-
 
             # LMS6 Specific Actions
             if self.sonde_type == 'MK2LMS' or self.sonde_type == 'LMS6':

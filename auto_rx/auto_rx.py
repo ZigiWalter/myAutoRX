@@ -444,6 +444,7 @@ def telemetry_filter(telemetry):
     if telemetry['alt'] > config['max_altitude']:
         _altitude_breach = telemetry['alt'] - config['max_altitude']
         logging.warning("Sonde %s position breached altitude cap by %d m." % (telemetry['id'], _altitude_breach))
+        logging.info("Sonde %s position breached altitude (%.5f,%.5f %f)." % (telemetry['id'], telemetry['lat'],telemetry['lon'],telemetry['alt']))
         return False
 
 
@@ -465,6 +466,7 @@ def telemetry_filter(telemetry):
         if _info['straight_distance'] > config['max_radius_km']*1000:
             _radius_breach = _info['straight_distance']/1000.0 - config['max_radius_km']
             logging.warning("Sonde %s position breached radius cap by %.1f km." % (telemetry['id'], _radius_breach))
+            logging.info("Sonde %s position breached radius cap by %.1f km (%.5f,%.5f %f)." % (telemetry['id'], _radius_breach,telemetry['lat'],telemetry['lon'],telemetry['alt']))
             return False
 
     # Payload Serial Number Checks
