@@ -19,6 +19,9 @@ from .utils import AsynchronousFileReader, rtlsdr_test
 from .gps import get_ephemeris, get_almanac
 from .sonde_specific import *
 from .fsk_demod import FSKDemodStats
+import numpy as np
+
+brown_list=[403.0]
 
 # Global valid sonde types list.
 VALID_SONDE_TYPES = ['RS92', 'RS41', 'DFM', 'M10', 'iMet', 'MK2LMS', 'LMS6', 'MEISEI', 'UDP']
@@ -697,6 +700,16 @@ class SondeDecoder(object):
             if time.time() > (_last_packet + self.timeout):
                 # If we have not seen data for a while, break.
                 self.log_error("RX Timed out.")
+                #Zigi
+                #Check if no decoded packets and frquency is in the brown list
+                if (self.firstPacket==0):
+                    brownList=np.array(brown_list)
+                    index=np.argwhere(np.abs(brownList*1e6-self.sonde_freq) < (10000/2.0))
+                    if len(index)>0:
+                        self.log_info("Locked out sonde: %.3fMHz (brown listed)" % (self.sonde_freq/1e6))
+                        self.exit_state = "Lockout"
+                    break;
+                    
                 self.exit_state = "Timeout"
                 break
             #Zigi
