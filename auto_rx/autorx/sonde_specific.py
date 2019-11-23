@@ -52,7 +52,7 @@ def fix_datetime(datetime_str, local_dt_str = None):
 #	iMet Radiosonde Functions
 #
 
-def imet_unique_id(telemetry, custom="", framRate=1):
+def imet_unique_id(telemetry, custom="", frameRate=1):
 	'''
 	Generate a 'unique' imet radiosonde ID based on the power-on time, frequency, and an optional location code.
 	This requires the following fields be present in the telemetry dict:
@@ -62,9 +62,11 @@ def imet_unique_id(telemetry, custom="", framRate=1):
 	'''
 
 	_imet_dt = telemetry['datetime_dt']
-
+        if(frameRate!=1):
+            print("***frameRate="+str(frameRate))
+            
 	# Determine power on time: Current time -  number of frames (one frame per second)
-	_power_on_time = _imet_dt - datetime.timedelta(seconds=telemetry['frame']/framRate)
+	_power_on_time = _imet_dt - datetime.timedelta(seconds=telemetry['frame']/frameRate)
 
 	# Round frequency to the nearest 100 kHz (iMet sondes only have 100 kHz frequency steps)
 	_freq = round(telemetry['freq_float']*10.0)/10.0

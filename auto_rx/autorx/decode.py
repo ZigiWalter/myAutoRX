@@ -862,7 +862,7 @@ class SondeDecoder(object):
                         #print("f2:" + str(f2) +" t2:" + str(t2))
                         rate=(f2-f1)/((t2-t1).total_seconds())
                         #print("rate:"+str(rate))               
-                        self.imet_id = imet_unique_id(_telemetry, custom=self.imet_location, framRate=rate)
+                        self.imet_id = imet_unique_id(_telemetry, custom=self.imet_location, frameRate=rate)
                         #print("ID: " + self.imet_id)
                 _telemetry['id'] = self.imet_id
                 _telemetry['station_code'] = self.imet_location
