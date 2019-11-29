@@ -707,7 +707,7 @@ class SondeDecoder(object):
                     index=np.argwhere(np.abs(brownList*1e6-self.sonde_freq) < (10000/2.0))
                     if len(index)>0:
                         self.log_info("Locked out sonde: %.3fMHz (brown listed)" % (self.sonde_freq/1e6))
-                        self.exit_state = "Lockout"
+                        self.exit_state = "Brown"
                     break;
                     
                 self.exit_state = "Timeout"
@@ -977,7 +977,7 @@ class SondeDecoder(object):
         if((self.firstPacket==0) or ((time.time()-self.firstPacket)<30)):
             return False
         northWest = (33.550000, 34.700000)
-        southEast = (30.800000, 37.200000)
+        southEast = (30.800000, 38.000000)
         #northWest = (33.389341, 34.538769)
         #southEast = (31.473511, 36.926776)
         #logging.info("Decoder Lock-out n #%s %s %.3f - %s" % (str(self.device_idx), self.sonde_type, self.sonde_freq/1e6, telemetry))
