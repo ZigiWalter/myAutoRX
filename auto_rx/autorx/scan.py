@@ -13,6 +13,7 @@ import platform
 import subprocess
 import time
 import traceback
+import operator
 from threading import Thread, Lock
 from types import FunctionType, MethodType
 from .utils import detect_peaks, rtlsdr_test, reset_rtlsdr_by_serial, reset_all_rtlsdrs, peak_decimation
@@ -415,7 +416,7 @@ class SondeScanner(object):
         save_detection_audio = False,
         temporary_block_list = {},
         temporary_block_time = 60,
-        detect_attemp_list = [],
+        detect_attemp_dict = [],
         enable_peak_reorder = False,
         ngp_tweak = False):
         """ Initialise a Sonde Scanner Object.
@@ -487,7 +488,7 @@ class SondeScanner(object):
         self.temporary_block_list_lock = Lock()
         self.temporary_block_time = temporary_block_time
 
-        self.detect_attemp_list = detect_attemp_list
+        self.detect_attemp_dict = detect_attemp_dict
         self.enable_peak_reorder = enable_peak_reorder
         # Alert the user if there are temporary blocks in place.
         if len(self.temporary_block_list.keys())>0:
@@ -744,7 +745,10 @@ class SondeScanner(object):
                     #print("detect_attemp_list:"+ str(np.array(self.detect_attemp_list)/1e6))
                     #print("peak_frequencies before: " +str(np.array(peak_frequencies)/1e6))
                 
-                for pFreq in self.detect_attemp_list:
+                sorted_attempts = sorted(self.detect_attemp_dict.items(), key=operator.itemgetter(1))
+                
+                for attempt in sorted_attempts:
+                    pFreq=attempt[0]
                     _index = np.argwhere(np.abs(peak_frequencies-pFreq) <= (self.quantization))
                     #print("Found " +str(pFreq) + " in index:\n" + str(_index))
                     items=peak_frequencies[_index]

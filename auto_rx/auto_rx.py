@@ -70,7 +70,7 @@ gpsd_adaptor = None
 temporary_block_list = {}
 
 #Zigi
-detect_attemp_list = []
+detect_attemp_dict = {}
 
 def allocate_sdr(check_only = False, task_description = ""):
     """ Allocate an un-used SDR for a task.
@@ -102,7 +102,7 @@ def allocate_sdr(check_only = False, task_description = ""):
 def start_scanner():
     """ Start a scanner thread on the first available SDR """
     global config, RS_PATH, temporary_block_list
-    global detect_attemp_list
+    global detect_attemp_dict
     
     if 'SCAN' in autorx.task_list:
         # Already a scanner running! Return.
@@ -145,7 +145,7 @@ def start_scanner():
             save_detection_audio = config['save_detection_audio'],
             temporary_block_list = temporary_block_list,
             temporary_block_time = config['temporary_block_time'],
-            detect_attemp_list = detect_attemp_list,
+            detect_attemp_dict = detect_attemp_dict,
             enable_peak_reorder = config['decode_limit_period']>0          
             )
 
@@ -185,7 +185,7 @@ def start_decoder(freq, sonde_type):
 
     """
     global config, RS_PATH, exporter_functions, rs92_ephemeris, temporary_block_list
-    global detect_attemp_list
+    global detect_attemp_dict
     
     # Allocate a SDR.
     _device_idx = allocate_sdr(task_description="Decoder (%s, %.3f MHz)" % (sonde_type, freq/1e6))
@@ -242,7 +242,7 @@ def handle_scan_results():
     - If there is no free SDR, but a scanner is running, stop the scanner and start decoding.
     """
     global config, temporary_block_list
-    global detect_attemp_list
+    global detect_attemp_dict
 
     if autorx.scan_results.qsize() > 0:
         # Grab the latest detections from the scan result queue.
@@ -331,7 +331,7 @@ def handle_scan_results():
 
 def clean_task_list():
     """ Check the task list to see if any tasks have stopped running. If so, release the associated SDR """
-    global detect_attemp_list
+    global detect_attemp_dict
     for _key in autorx.task_list.copy().keys():
         # Attempt to get the state of the task
         try:
@@ -374,16 +374,24 @@ def clean_task_list():
             #elif _exit_state == "LIMIT":
             # This task was a decoder, and it has encountered an locked-out sonde.
             if (config['decode_limit_period']>0):
-                logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
-                _index = np.argwhere(np.abs(np.array(detect_attemp_list)-_key)<(10000/2.0))
-                detect_attemp_np = np.delete(detect_attemp_list, _index)
-                detect_attemp_list = detect_attemp_np.tolist()
-                detect_attemp_list.append(_key)
+                #logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
+                for attemptFreq in detect_attemp_dict.copy().keys():
+                    if np.abs(attemptFreq-_key)<(10000/2.0):
+                        detect_attemp_dict.pop(attemptFreq)
+                        print("Reordering:" +str(attemptFreq))
+                detect_attemp_dict[_key]=time.time()
+                print("Added:" +str(_key))
+                print(detect_attemp_dict)      
+                    
+                #_index = np.argwhere(np.abs(np.array(detect_attemp_list)-_key)<(10000/2.0))
+                #detect_attemp_np = np.delete(detect_attemp_list, _index)
+                #detect_attemp_list = detect_attemp_np.tolist()
+                #detect_attemp_list.append(_key)
                 
-                if len(detect_attemp_list) > config['max_peaks']: #self.max_peaks:
-                    detect_attemp_list = detect_attemp_list[-config['max_peaks']:]
+                #if len(detect_attemp_list) > config['max_peaks']: #self.max_peaks:
+                #    detect_attemp_list = detect_attemp_list[-config['max_peaks']:]
                 
-                print("New detect_attemp_list:"+ str(np.array(detect_attemp_list)/1e6))
+                #print("New detect_attemp_list:"+ str(np.array(detect_attemp_list)/1e6))
             
             # Release its associated SDR.
             autorx.sdr_list[_task_sdr]['in_use'] = False
@@ -394,6 +402,14 @@ def clean_task_list():
             # Indicate to the web client that the task list has been updated.
             flask_emit_event('task_event')
 
+    #Zigi
+    if (config['decode_limit_period']>0):
+        #logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
+        for attemptFreq in detect_attemp_dict.copy().keys():
+            if((time.time()-detect_attemp_dict[attemptFreq])>=((2*len(detect_attemp_dict.copy().keys())+1)*config['decode_limit_period']*60)):
+                detect_attemp_dict.pop(attemptFreq)
+                print("Removing:" +str(attemptFreq))
+                
     # Clean out the temporary block list of old entries.
     for _freq in temporary_block_list.copy().keys():
         if temporary_block_list[_freq] < (time.time() - config['temporary_block_time']*60):
