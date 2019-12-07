@@ -21,7 +21,7 @@ from .sonde_specific import *
 from .fsk_demod import FSKDemodStats
 import numpy as np
 
-brown_list=[403.0]
+#brown_list=[403.0]
 
 # Global valid sonde types list.
 VALID_SONDE_TYPES = ['RS92', 'RS41', 'DFM', 'M10', 'iMet', 'MK2LMS', 'LMS6', 'MEISEI', 'UDP']
@@ -96,6 +96,7 @@ class SondeDecoder(object):
         experimental_decoder = False,
         geo_filter_enable = False,
         decode_limit_period = 0,
+        brownlist = [],
         imet_location = "SONDE"):
         """ Initialise and start a Sonde Decoder.
 
@@ -151,6 +152,7 @@ class SondeDecoder(object):
         self.experimental_decoder = experimental_decoder
         self.geo_filter_enable = geo_filter_enable
         self.decode_limit_period = decode_limit_period
+        self.brownlist = brownlist
         self.imet_location = imet_location
 
         # iMet ID store. We latch in the first iMet ID we calculate, to avoid issues with iMet-1-RS units
@@ -703,8 +705,8 @@ class SondeDecoder(object):
                 #Zigi
                 #Check if no decoded packets and frquency is in the brown list
                 if (self.firstPacket==0):
-                    brownList=np.array(brown_list)
-                    index=np.argwhere(np.abs(brownList*1e6-self.sonde_freq) < (10000/2.0))
+                    brownListNP=np.array(self.brownlist)
+                    index=np.argwhere(np.abs(brownListNP*1e6-self.sonde_freq) < (10000/2.0))
                     if len(index)>0:
                         self.log_info("Locked out sonde: %.3fMHz (brown listed)" % (self.sonde_freq/1e6))
                         self.exit_state = "Brown"

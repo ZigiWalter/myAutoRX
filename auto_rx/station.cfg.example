@@ -430,6 +430,5 @@ max_altitude = 50000
 # Discard positions more than 1000 km from the observation station location (if set)
 max_radius_km = 1000
 geo_filter_enable = False
-decode_limit_period = 3
-
-
+decode_limit_period = 8
+brownlist = [403.0]

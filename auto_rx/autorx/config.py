@@ -143,7 +143,8 @@ def read_auto_rx_config(filename, no_sdr_test=False):
 		# This setting is not exposed to users as it's only used for unit/int testing
 		'habitat_url': "https://habitat.sondehub.org/",
                 'geo_filter_enable' : False,
-                'decode_limit_period' : 0
+                'decode_limit_period' : 0,
+                'brownlist'	: [],
 	}
 
 
@@ -198,6 +199,7 @@ def read_auto_rx_config(filename, no_sdr_test=False):
 		auto_rx_config['max_radius_km'] = config.getint('filtering', 'max_radius_km')
 		auto_rx_config['geo_filter_enable'] = config.getboolean('filtering', 'geo_filter_enable')
 		auto_rx_config['decode_limit_period'] = config.getint('filtering', 'decode_limit_period')
+                auto_rx_config['brownlist'] = json.loads(config.get('filtering', 'brownlist'))
 
 		# Habitat Settings
 		auto_rx_config['habitat_enabled'] = config.getboolean('habitat', 'habitat_enabled')

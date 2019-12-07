@@ -146,7 +146,7 @@ def start_scanner():
             temporary_block_list = temporary_block_list,
             temporary_block_time = config['temporary_block_time'],
             detect_attemp_dict = detect_attemp_dict,
-            enable_peak_reorder = config['decode_limit_period']>0          
+            enable_peak_reorder = config['decode_limit_period']>0
             )
 
         # Add a reference into the sdr_list entry
@@ -225,7 +225,8 @@ def start_decoder(freq, sonde_type):
             rs41_drift_tweak = config['rs41_drift_tweak'],
             experimental_decoder = config['experimental_decoders'][_exp_sonde_type],
             geo_filter_enable = config['geo_filter_enable'],
-            decode_limit_period = config['decode_limit_period']
+            decode_limit_period = config['decode_limit_period'],
+            brownlist = config['brownlist']
             )
         autorx.sdr_list[_device_idx]['task'] = autorx.task_list[freq]['task']
 
@@ -378,10 +379,10 @@ def clean_task_list():
                 for attemptFreq in detect_attemp_dict.copy().keys():
                     if np.abs(attemptFreq-_key)<(10000/2.0):
                         detect_attemp_dict.pop(attemptFreq)
-                        print("Reordering:" +str(attemptFreq))
+                        #print("Reordering:" +str(attemptFreq))
                 detect_attemp_dict[_key]=time.time()
-                print("Added:" +str(_key))
-                print(detect_attemp_dict)      
+                #print("Added:" +str(_key))
+                #print(detect_attemp_dict)      
                     
                 #_index = np.argwhere(np.abs(np.array(detect_attemp_list)-_key)<(10000/2.0))
                 #detect_attemp_np = np.delete(detect_attemp_list, _index)

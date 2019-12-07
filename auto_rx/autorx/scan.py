@@ -746,7 +746,8 @@ class SondeScanner(object):
                     #print("peak_frequencies before: " +str(np.array(peak_frequencies)/1e6))
                 
                 sorted_attempts = sorted(self.detect_attemp_dict.items(), key=operator.itemgetter(1))
-                
+                #if(len(sorted_attempts)>0):
+                    #print(str(sorted_attempts))
                 for attempt in sorted_attempts:
                     pFreq=attempt[0]
                     _index = np.argwhere(np.abs(peak_frequencies-pFreq) <= (self.quantization))
