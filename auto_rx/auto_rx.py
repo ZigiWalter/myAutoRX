@@ -409,7 +409,7 @@ def clean_task_list():
         for attemptFreq in detect_attemp_dict.copy().keys():
             if((time.time()-detect_attemp_dict[attemptFreq])>=((2*len(detect_attemp_dict.copy().keys())+1)*config['decode_limit_period']*60)):
                 detect_attemp_dict.pop(attemptFreq)
-                print("Removing:" +str(attemptFreq))
+                #print("Removing:" +str(attemptFreq))
                 
     # Clean out the temporary block list of old entries.
     for _freq in temporary_block_list.copy().keys():

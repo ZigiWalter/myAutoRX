@@ -979,7 +979,7 @@ class SondeDecoder(object):
         if((self.firstPacket==0) or ((time.time()-self.firstPacket)<30)):
             return False
         northWest = (33.550000, 34.700000)
-        southEast = (30.800000, 38.000000)
+        southEast = (30.800000, 38.500000)
         #northWest = (33.389341, 34.538769)
         #southEast = (31.473511, 36.926776)
         #logging.info("Decoder Lock-out n #%s %s %.3f - %s" % (str(self.device_idx), self.sonde_type, self.sonde_freq/1e6, telemetry))
