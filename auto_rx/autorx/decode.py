@@ -905,7 +905,7 @@ class SondeDecoder(object):
                 self.decoder_running=False;
                 return False
             
-            if((self.decode_limit_period>0) and (self.firstPacket>0) and ((time.time()-self.firstPacket)>(self.decode_limit_period*60))):
+            if((self.decode_limit_period>0) and (self.firstPacket>0) and ((time.time()-self.firstPacket)>(self.decode_limit_period*60)) and (_telemetry['alt']>3000)):
                 self.log_info("Reached decode limit period: %.3fMHz, (%.6f,%.6f)" % (self.sonde_freq/1e6,_telemetry['lat'],_telemetry['lon']))
                 self.exit_state = "LIMIT"
                 self.decoder_running=False;
@@ -976,7 +976,7 @@ class SondeDecoder(object):
         #return False
         if (not self.geo_filter_enable):
             return False
-        if((self.firstPacket==0) or ((time.time()-self.firstPacket)<30)):
+        if((self.firstPacket==0) or ((time.time()-self.firstPacket)<45)):
             return False
         northWest = (33.550000, 34.700000)
         southEast = (30.800000, 38.500000)
