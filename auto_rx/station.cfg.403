@@ -128,7 +128,7 @@ gpsd_port = 2947
 #   If you use a custom payload callsign, you will need to create an appropriate payload document for it to appear on the map
 # 
 [habitat]
-habitat_enabled = False
+habitat_enabled = True
 
 # Uploader callsign, as shown above. PLEASE CHANGE THIS TO SOMETHING UNIQUE.
 uploader_callsign = ZW3B_AUTO_RX
