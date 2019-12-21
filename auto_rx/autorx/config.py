@@ -145,6 +145,7 @@ def read_auto_rx_config(filename, no_sdr_test=False):
                 'geo_filter_enable' : False,
                 'decode_limit_period' : 0,
                 'brownlist'	: [],
+                'black_types' : [],
 	}
 
 
@@ -200,7 +201,8 @@ def read_auto_rx_config(filename, no_sdr_test=False):
 		auto_rx_config['geo_filter_enable'] = config.getboolean('filtering', 'geo_filter_enable')
 		auto_rx_config['decode_limit_period'] = config.getint('filtering', 'decode_limit_period')
                 auto_rx_config['brownlist'] = json.loads(config.get('filtering', 'brownlist'))
-
+                auto_rx_config['black_types'] = json.loads(config.get('filtering', 'black_types'))
+                
 		# Habitat Settings
 		auto_rx_config['habitat_enabled'] = config.getboolean('habitat', 'habitat_enabled')
 		auto_rx_config['habitat_upload_rate'] = config.getint('habitat', 'upload_rate')

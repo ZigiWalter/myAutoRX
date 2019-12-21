@@ -97,6 +97,7 @@ class SondeDecoder(object):
         geo_filter_enable = False,
         decode_limit_period = 0,
         brownlist = [],
+        black_types = [],
         imet_location = "SONDE"):
         """ Initialise and start a Sonde Decoder.
 
@@ -153,6 +154,7 @@ class SondeDecoder(object):
         self.geo_filter_enable = geo_filter_enable
         self.decode_limit_period = decode_limit_period
         self.brownlist = brownlist
+        self.black_types = black_types
         self.imet_location = imet_location
 
         # iMet ID store. We latch in the first iMet ID we calculate, to avoid issues with iMet-1-RS units
@@ -181,6 +183,12 @@ class SondeDecoder(object):
             self.decoder_running = False
             return 
 
+        #Zigi
+        if self.sonde_type  in self.black_types:
+            self.log_info("Black sonde type: %s" % self.sonde_type)
+            self.decoder_running = False
+            return
+        
         # Test if the supplied RTLSDR is working.
         _rtlsdr_ok = rtlsdr_test(device_idx)
 

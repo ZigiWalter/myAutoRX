@@ -226,7 +226,8 @@ def start_decoder(freq, sonde_type):
             experimental_decoder = config['experimental_decoders'][_exp_sonde_type],
             geo_filter_enable = config['geo_filter_enable'],
             decode_limit_period = config['decode_limit_period'],
-            brownlist = config['brownlist']
+            brownlist = config['brownlist'],
+            black_types = config['black_types']
             )
         autorx.sdr_list[_device_idx]['task'] = autorx.task_list[freq]['task']
 
