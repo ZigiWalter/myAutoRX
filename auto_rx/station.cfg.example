@@ -432,3 +432,4 @@ max_radius_km = 1000
 geo_filter_enable = False
 decode_limit_period = 8
 brownlist = [403.0]
+black_types = ["iMet"]
