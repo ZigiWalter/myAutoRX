@@ -59,14 +59,14 @@ bias = False
 #	You may also need to apply a small offset to the frequency for decoding reliability (i.e. 1676.025 MHz) as 
 #	the sondes are often off-frequency. For now, check in something like GQRX to get an idea of what offset is required.
 
-min_freq = 402.95
-max_freq = 403.5
+min_freq = 400.1
+max_freq = 406.5
 #min_freq = 401.5
 #max_freq = 402.5
 
 
 # Have the decoder timeout after X seconds of no valid data.
-rx_timeout = 180
+rx_timeout = 120
 
 # Frequency Lists - These must be provided as JSON-compatible lists of floats (in MHz), i.e. [400.50, 401.520, 403.200]
 
@@ -77,7 +77,7 @@ whitelist = []
 # Black-List - Any values added to this list will be removed from the list of detected peaks.
 # This is used to remove known spurs or other interferers from the scan list, potentially speeding up detection of a sonde.
 #blacklist = [403.2,404.0,405.5,405.51]
-blacklist = [403.2,404.0,405.51]
+blacklist = [401.19,403.2,404.0,405.51]
 
 # Grey-List - Any values in this list will be added to the start every scan run.
 # This is useful when you know the regular frequency of a local sonde, but still want to allow detections on other frequencies.
@@ -378,7 +378,7 @@ max_peaks = 10
 # Scanner - Minimum distance between detected peaks (Hz)
 min_distance = 1000
 # Scanner - Scan Dwell Time - How long to observe the specified spectrum for.
-scan_dwell_time = 15
+scan_dwell_time = 20
 # Scanner - Detection Dwell time - How long to wait for a sonde detection on each peak.
 detect_dwell_time = 5
 # Scanner - Delay between scans. We should delay a short amount between scans to allow for decoders and other actions to jump in.
@@ -453,7 +453,7 @@ ngp_tweak = False
 max_altitude = 50000
 # Discard positions more than 1000 km from the observation station location (if set)
 max_radius_km = 1000
-geo_filter_enable = False
-decode_limit_period = 0
-brownlist = []
-black_types = ["iMet"]
+geo_filter_enable = True
+decode_limit_period = 8
+brownlist = [403.0]
+black_types = []
