@@ -712,7 +712,7 @@ class SondeDecoder(object):
                 self.log_error("RX Timed out.")
                 #Zigi
                 #Check if no decoded packets and frquency is in the brown list
-                if (self.firstPacket==0):
+                if ((self.firstPacket==0) and (self.sonde_type == 'iMet')):
                     brownListNP=np.array(self.brownlist)
                     index=np.argwhere(np.abs(brownListNP*1e6-self.sonde_freq) < (10000/2.0))
                     if len(index)>0:
