@@ -62,8 +62,6 @@ def imet_unique_id(telemetry, custom="", frameRate=1):
 	'''
 
 	_imet_dt = telemetry['datetime_dt']
-        if(frameRate!=1):
-            print("***frameRate="+str(frameRate))
             
 	# Determine power on time: Current time -  number of frames (one frame per second)
 	_power_on_time = _imet_dt - datetime.timedelta(seconds=telemetry['frame']/frameRate)
@@ -77,6 +75,9 @@ def imet_unique_id(telemetry, custom="", frameRate=1):
 
 	# Calculate a SHA256 hash of the 
 	_hash = hashlib.sha256(_temp_str.encode('ascii')).hexdigest().upper()
+        if(frameRate!=1):
+            print("***frameRate="+str(frameRate))
+            print(str(_imet_dt) + " " + str(telemetry['frame'])+ " " + str(_power_on_time) + " " + str(_temp_str))
 
 	return "IMET-" + _hash[-8:]
 
