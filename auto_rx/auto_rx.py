@@ -368,7 +368,7 @@ def clean_task_list():
                 # This task was a decoder, and it has encountered an locked-out sonde.
                 logging.info("Task Manager - Adding temporary lockout for frequency %.3f MHz" % (_key/1e6))
                 # Add the sonde's frequency to the global temporary block-list
-                temporary_block_list[_key] = time.time()-config['temporary_block_time']*60+30*60
+                temporary_block_list[_key] = time.time()-config['temporary_block_time']*60+60*60
                 # If there is a scanner currently running, add it to the scanners internal block list.
                 if 'SCAN' in autorx.task_list:
                     autorx.task_list['SCAN']['task'].add_temporary_block(_key)

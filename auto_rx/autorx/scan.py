@@ -713,6 +713,8 @@ class SondeScanner(object):
             self.temporary_block_list_lock.acquire()
             #Zigi
             blockedPeakList=[];
+            actualBlockedPeakList=[];
+            #print ("zzzz:"+str(self.quantization))
             for _frequency in self.temporary_block_list.copy().keys():
                 # Check the time the block was added.
                 if self.temporary_block_list[_frequency] > (time.time()-self.temporary_block_time*60):
@@ -720,14 +722,21 @@ class SondeScanner(object):
                     #Zigi
                     #_index = np.argwhere(peak_frequencies==_frequency)
                     #_index = np.argwhere(abs(peak_frequencies-_frequency)<=self.quantization)
-		    _index = np.argwhere(np.abs(peak_frequencies-_frequency) < (self.quantization/2.0))
+		    _index = np.argwhere(np.abs(peak_frequencies-_frequency) <= (self.quantization/1.5)) #was: (self.quantization/2.0))
                     #print("ZZZ: %s" %type(peak_frequencies))
                     #print("ZZZ: %s" %str(peak_frequencies))
-                    #print("ZZZ: %s" %type((peak_frequencies[_index][0]).tolist()))
+                    #print("ZZZ: %s" %type((peak_frequencies[_index][0]).tolist()))    
                     blockedPeakList.append(_frequency/1e6)
+                    #print(type(_index))
+		    #print(_index)
+                    #print(type(peak_frequencies[_index]))
+                    #print(peak_frequencies[_index])
+                    #print(type(peak_frequencies[_index].tolist()))
+                    #print(peak_frequencies[_index].tolist())
+                    actualBlockedPeakList.append(peak_frequencies[_index].tolist())
 #self.log_info("Removing peaks: %s" % (peak_frequencies[_index]/1e6))
                     #%blockedPeakList.append(float(str(peak_frequencies[_index].tolist())));
-                    peak_frequencies = np.delete(peak_frequencies, _index)
+                    peak_frequencies = np.delete(peak_frequencies, _index)             
                     if len(_index) > 0:
                         self.log_debug("Peak on %.3f MHz was removed due to temporary block." % (_frequency/1e6))
 
@@ -788,7 +797,8 @@ class SondeScanner(object):
                 self.log_debug("No peaks found after blacklist frequencies removed.")
                 return []
             else:
-                self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
+                #self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
+                self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(actualBlockedPeakList)))
 
         else:
             # We have been provided a whitelist - scan through the supplied frequencies.
