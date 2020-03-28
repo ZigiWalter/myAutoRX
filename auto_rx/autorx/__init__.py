@@ -17,8 +17,8 @@ except ImportError:
 # MINOR - New sonde type support, other fairly big changes that may result in telemetry or config file incompatability issus.
 # PATCH - Small changes, or minor feature additions.
 
-__version__ = "1.3.1-Z1"
-
+__version__ = "1.3.1"
+__version__ += "-Z1"
 # Global Variables
 
 # RTLSDR Usage Register - This dictionary holds information about each SDR and its currently running Decoder / Scanner
