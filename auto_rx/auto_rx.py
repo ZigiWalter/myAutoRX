@@ -71,6 +71,7 @@ temporary_block_list = {}
 
 #Zigi
 detect_attemp_dict = {}
+fail_detect_dict = {}
 
 def allocate_sdr(check_only = False, task_description = ""):
     """ Allocate an un-used SDR for a task.
@@ -103,6 +104,7 @@ def start_scanner():
     """ Start a scanner thread on the first available SDR """
     global config, RS_PATH, temporary_block_list
     global detect_attemp_dict
+    global fail_detect_dict
     
     if 'SCAN' in autorx.task_list:
         # Already a scanner running! Return.
@@ -145,8 +147,11 @@ def start_scanner():
             save_detection_audio = config['save_detection_audio'],
             temporary_block_list = temporary_block_list,
             temporary_block_time = config['temporary_block_time'],
-            detect_attemp_dict = detect_attemp_dict,
-            enable_peak_reorder = config['decode_limit_period']>0
+            detect_attemp_dict = detect_attemp_dict,           
+            enable_peak_reorder = config['decode_limit_period']>0,
+            fail_detect_dict = fail_detect_dict,
+            block_on_detect_fail_time = config['block_on_detect_fail_time'],
+            block_on_detect_fail_count = config['block_on_detect_fail_count'],
             )
 
         # Add a reference into the sdr_list entry
@@ -227,7 +232,7 @@ def start_decoder(freq, sonde_type):
             geo_filter_enable = config['geo_filter_enable'],
             decode_limit_period = config['decode_limit_period'],
             brownlist = config['brownlist'],
-            black_types = config['black_types']
+            black_types = config['black_types'],  
             )
         autorx.sdr_list[_device_idx]['task'] = autorx.task_list[freq]['task']
 
@@ -334,6 +339,7 @@ def handle_scan_results():
 def clean_task_list():
     """ Check the task list to see if any tasks have stopped running. If so, release the associated SDR """
     global detect_attemp_dict
+    global fail_detect_dict
     for _key in autorx.task_list.copy().keys():
         # Attempt to get the state of the task
         try:

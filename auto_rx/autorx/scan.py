@@ -417,8 +417,12 @@ class SondeScanner(object):
         temporary_block_list = {},
         temporary_block_time = 60,
         detect_attemp_dict = [],
+        fail_detect_dict = [],
         enable_peak_reorder = False,
-        ngp_tweak = False):
+        ngp_tweak = False,
+        block_on_detect_fail_time = 0,
+        block_on_detect_fail_count = 5 
+                 ):
         """ Initialise a Sonde Scanner Object.
 
         Apologies for the huge number of args...
@@ -489,7 +493,10 @@ class SondeScanner(object):
         self.temporary_block_time = temporary_block_time
 
         self.detect_attemp_dict = detect_attemp_dict
+        self.fail_detect_dict = fail_detect_dict
         self.enable_peak_reorder = enable_peak_reorder
+        self.block_on_detect_fail_time = block_on_detect_fail_time
+        self.block_on_detect_fail_count = block_on_detect_fail_count
         # Alert the user if there are temporary blocks in place.
         if len(self.temporary_block_list.keys())>0:
             self.log_info("Temporary blocks in place for frequencies: %s" % str(self.temporary_block_list.keys()))
@@ -805,7 +812,9 @@ class SondeScanner(object):
             peak_frequencies = np.array(self.whitelist)*1e6
             self.log_info("Scanning on whitelist frequencies (MHz): %s" % str(peak_frequencies/1e6))
 
-
+        
+        #Zigi
+        detect_fail_list=[]
         # Run rs_detect on each peak frequency, to determine if there is a sonde there.
         for freq in peak_frequencies:
 
@@ -838,8 +847,34 @@ class SondeScanner(object):
                 # If we only want the first detected sonde, then return now.
                 if first_only:
                     return _search_results
+      
+            #Zigi
+            else:
+                detect_fail_list.append(_freq)
 
-                # Otherwise, we continue....
+        if self.block_on_detect_fail_time > 0:
+            for _freq in self.fail_detect_dict.copy():
+                if _freq not in detect_fail_list:
+                    print("Zeroing count for " + str(_freq/1e6) + " MHz")
+                    del self.fail_detect_dict[_freq]
+                    
+            for _freq in detect_fail_list :   
+                detect_fail_cnt = self.fail_detect_dict.get(_freq,0) + 1
+                self.fail_detect_dict[_freq] = detect_fail_cnt
+                #print("Not detected: " + str (_freq/1000000) + ", cnt: " + str(detect_fail_cnt))
+                if detect_fail_cnt>=self.block_on_detect_fail_count:
+                    #print("Blocking: " + str(_freq/1e6))
+                    #self.add_temporary_block(_freq)
+                    self.temporary_block_list_lock.acquire()
+                    self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
+                    self.temporary_block_list_lock.release()
+                    self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                    del self.fail_detect_dict[_freq]
+       
+            print("ZZZ1: " + str(self.fail_detect_dict))
+
+
+        # Otherwise, we continue....
 
         if len(_search_results) == 0:
             self.log_debug("No sondes detected.")
