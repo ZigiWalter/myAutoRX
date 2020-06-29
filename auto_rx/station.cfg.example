@@ -438,7 +438,6 @@ brownlist = [403.0]
 #Block decoding of these sonde types.
 black_types = ["iMet"]
 #Block a frequency after this much consecutive failing detect attempts.
-block_on_detect_fail_count = 3
+block_on_detect_fail_count = 4
 #Time to block in case of consecutive detect attempts. Set to zero to disable.
 block_on_detect_fail_time = 20
-
