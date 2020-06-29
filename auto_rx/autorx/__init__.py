@@ -18,7 +18,7 @@ except ImportError:
 # PATCH - Small changes, or minor feature additions.
 
 __version__ = "1.3.1"
-__version__ += "-Z1"
+__version__ += "-Z2"
 # Global Variables
 
 # RTLSDR Usage Register - This dictionary holds information about each SDR and its currently running Decoder / Scanner

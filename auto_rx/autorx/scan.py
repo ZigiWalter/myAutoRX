@@ -720,29 +720,17 @@ class SondeScanner(object):
             self.temporary_block_list_lock.acquire()
             #Zigi
             blockedPeakList=[];
-            actualBlockedPeakList=[];
+            actualBlockedPeakList=np.array([]);
             #print ("zzzz:"+str(self.quantization))
             for _frequency in self.temporary_block_list.copy().keys():
                 # Check the time the block was added.
                 if self.temporary_block_list[_frequency] > (time.time()-self.temporary_block_time*60):
                     # We should still be blocking this frequency, so remove any peaks with this frequency.
                     #Zigi
-                    #_index = np.argwhere(peak_frequencies==_frequency)
-                    #_index = np.argwhere(abs(peak_frequencies-_frequency)<=self.quantization)
 		    _index = np.argwhere(np.abs(peak_frequencies-_frequency) <= (self.quantization/1.5)) #was: (self.quantization/2.0))
-                    #print("ZZZ: %s" %type(peak_frequencies))
-                    #print("ZZZ: %s" %str(peak_frequencies))
-                    #print("ZZZ: %s" %type((peak_frequencies[_index][0]).tolist()))    
-                    blockedPeakList.append(_frequency/1e6)
-                    #print(type(_index))
-		    #print(_index)
-                    #print(type(peak_frequencies[_index]))
-                    #print(peak_frequencies[_index])
-                    #print(type(peak_frequencies[_index].tolist()))
-                    #print(peak_frequencies[_index].tolist())
-                    actualBlockedPeakList.append(peak_frequencies[_index].tolist())
+                    blockedPeakList.append(_frequency/1e6)           
+                    actualBlockedPeakList = np.hstack((actualBlockedPeakList,peak_frequencies[np.ndarray.flatten(_index)]))
 #self.log_info("Removing peaks: %s" % (peak_frequencies[_index]/1e6))
-                    #%blockedPeakList.append(float(str(peak_frequencies[_index].tolist())));
                     peak_frequencies = np.delete(peak_frequencies, _index)             
                     if len(_index) > 0:
                         self.log_debug("Peak on %.3f MHz was removed due to temporary block." % (_frequency/1e6))
@@ -805,7 +793,7 @@ class SondeScanner(object):
                 return []
             else:
                 #self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
-                self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(actualBlockedPeakList)))
+                self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(actualBlockedPeakList/1e6)))
 
         else:
             # We have been provided a whitelist - scan through the supplied frequencies.
@@ -817,9 +805,7 @@ class SondeScanner(object):
         detect_fail_list=[]
         # Run rs_detect on each peak frequency, to determine if there is a sonde there.
         for freq in peak_frequencies:
-
             _freq = float(freq)
-                
             # Exit opportunity.
             if self.sonde_scanner_running == False:
                 return []
@@ -851,11 +837,11 @@ class SondeScanner(object):
             #Zigi
             else:
                 detect_fail_list.append(_freq)
-
+ 
         if self.block_on_detect_fail_time > 0:
             for _freq in self.fail_detect_dict.copy():
                 if _freq not in detect_fail_list:
-                    print("Zeroing count for " + str(_freq/1e6) + " MHz")
+                    #print("Zeroing count for " + str(_freq/1e6) + " MHz")
                     del self.fail_detect_dict[_freq]
                     
             for _freq in detect_fail_list :   
@@ -871,7 +857,8 @@ class SondeScanner(object):
                     self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
                     del self.fail_detect_dict[_freq]
        
-            print("ZZZ1: " + str(self.fail_detect_dict))
+            #if len(self.fail_detect_dict.keys())>0:
+             #  print("ZZZ1: " + str(self.fail_detect_dict))
 
 
         # Otherwise, we continue....

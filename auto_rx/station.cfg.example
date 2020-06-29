@@ -429,7 +429,16 @@ ngp_tweak = False
 max_altitude = 50000
 # Discard positions more than 1000 km from the observation station location (if set)
 max_radius_km = 1000
+#Block a frequency if a sonde is detected within a (hard-coded) area.
 geo_filter_enable = False
+#Max consecutive decoding period.
 decode_limit_period = 8
+#Block a frequency after unsuccessfull iMet decoding.
 brownlist = [403.0]
+#Block decoding of these sonde types.
 black_types = ["iMet"]
+#Block a frequency after this much consecutive failing detect attempts.
+block_on_detect_fail_count = 3
+#Time to block in case of consecutive detect attempts. Set to zero to disable.
+block_on_detect_fail_time = 20
+
