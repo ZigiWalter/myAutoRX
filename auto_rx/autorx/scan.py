@@ -488,7 +488,7 @@ class SondeScanner(object):
         self.save_detection_audio = save_detection_audio
 
         # Temporary block list.
-        self.temporary_block_list = temporary_block_list.copy()
+        self.temporary_block_list = temporary_block_list #Zigi: was using copy()
         self.temporary_block_list_lock = Lock()
         self.temporary_block_time = temporary_block_time
 
@@ -836,7 +836,20 @@ class SondeScanner(object):
       
             #Zigi
             else:
-                detect_fail_list.append(_freq)
+                if self.block_on_detect_fail_time > 0:
+                    detect_fail_list.append(_freq)
+                    detect_fail_cnt = self.fail_detect_dict.get(_freq,0) + 1
+                    self.fail_detect_dict[_freq] = detect_fail_cnt
+                    #print("Not detected: " + str (_freq/1000000) + ", cnt: " + str(detect_fail_cnt))
+                    if detect_fail_cnt>=self.block_on_detect_fail_count:
+                        #print("Blocking: " + str(_freq/1e6))
+                        #self.add_temporary_block(_freq)
+                        self.temporary_block_list_lock.acquire()
+                        self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
+                        self.temporary_block_list_lock.release()
+                        #print("Z2: " + str(self.temporary_block_list))
+                        self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                        del self.fail_detect_dict[_freq]
  
         if self.block_on_detect_fail_time > 0:
             for _freq in self.fail_detect_dict.copy():
@@ -844,21 +857,11 @@ class SondeScanner(object):
                     #print("Zeroing count for " + str(_freq/1e6) + " MHz")
                     del self.fail_detect_dict[_freq]
                     
-            for _freq in detect_fail_list :   
-                detect_fail_cnt = self.fail_detect_dict.get(_freq,0) + 1
-                self.fail_detect_dict[_freq] = detect_fail_cnt
-                #print("Not detected: " + str (_freq/1000000) + ", cnt: " + str(detect_fail_cnt))
-                if detect_fail_cnt>=self.block_on_detect_fail_count:
-                    #print("Blocking: " + str(_freq/1e6))
-                    #self.add_temporary_block(_freq)
-                    self.temporary_block_list_lock.acquire()
-                    self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
-                    self.temporary_block_list_lock.release()
-                    self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
-                    del self.fail_detect_dict[_freq]
+            #for _freq in detect_fail_list :   
+                
        
             #if len(self.fail_detect_dict.keys())>0:
-             #  print("ZZZ1: " + str(self.fail_detect_dict))
+            #    print("ZZZ1: " + str(self.fail_detect_dict))
 
 
         # Otherwise, we continue....
