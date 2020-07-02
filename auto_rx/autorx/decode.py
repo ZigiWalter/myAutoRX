@@ -96,6 +96,7 @@ class SondeDecoder(object):
         experimental_decoder = False,
         geo_filter_enable = False,
         decode_limit_period = 0,
+        decode_limit_min_alt=3000,
         brownlist = [],
         black_types = [],
         imet_location = "SONDE"):
@@ -153,6 +154,7 @@ class SondeDecoder(object):
         self.experimental_decoder = experimental_decoder
         self.geo_filter_enable = geo_filter_enable
         self.decode_limit_period = decode_limit_period
+        self.decode_limit_min_alt = decode_limit_min_alt
         self.brownlist = brownlist
         self.black_types = black_types
         self.imet_location = imet_location
@@ -921,7 +923,7 @@ class SondeDecoder(object):
                 self.decoder_running=False;
                 return False
             
-            if((self.decode_limit_period>0) and (self.firstPacket>0) and ((time.time()-self.firstPacket)>(self.decode_limit_period*60)) and (_telemetry['alt']>3000)):
+            if((self.decode_limit_period>0) and (self.firstPacket>0) and ((time.time()-self.firstPacket)>(self.decode_limit_period*60)) and (_telemetry['alt']>self.decode_limit_min_alt)):
                 self.log_info("Reached decode limit period: %.3fMHz, (%.6f,%.6f)" % (self.sonde_freq/1e6,_telemetry['lat'],_telemetry['lon']))
                 self.exit_state = "LIMIT"
                 self.decoder_running=False;

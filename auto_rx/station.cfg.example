@@ -431,8 +431,10 @@ max_altitude = 50000
 max_radius_km = 1000
 #Block a frequency if a sonde is detected within a (hard-coded) area.
 geo_filter_enable = False
-#Max consecutive decoding period.
+#Max consecutive decoding period in minutes.
 decode_limit_period = 8
+#Do not limit decoding period below this altitute (meters).
+decode_limit_min_alt = 3000
 #Block a frequency after unsuccessfull iMet decoding.
 brownlist = [403.0]
 #Block decoding of these sonde types.
