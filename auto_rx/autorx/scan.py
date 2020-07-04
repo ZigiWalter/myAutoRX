@@ -681,6 +681,10 @@ class SondeScanner(object):
                 self.log_debug("No peaks found.")
                 # Emit a notification to the client that a scan is complete.
                 flask_emit_event('scan_event')
+                #Zigi
+                for _freq in self.fail_detect_dict.copy():
+                    #print("Zeroing count for " + str(_freq/1e6) + " MHz")
+                    del self.fail_detect_dict[_freq]
                 return []
 
             # Sort peaks by power.
@@ -788,8 +792,12 @@ class SondeScanner(object):
             # Tell the web client we have new data.
             flask_emit_event('scan_event')
 
-            if ((len(peak_frequencies) == 0) and (len(blockedPeakList) == 0)):
+            if ((len(peak_frequencies) == 0) and (len(actualBlockedPeakList) == 0)):
                 self.log_debug("No peaks found after blacklist frequencies removed.")
+                #Zigi
+                for _freq in self.fail_detect_dict.copy():
+                    #print("Zeroing count for " + str(_freq/1e6) + " MHz")
+                    del self.fail_detect_dict[_freq]
                 return []
             else:
                 #self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
