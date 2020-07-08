@@ -150,6 +150,7 @@ def start_scanner():
             detect_attemp_dict = detect_attemp_dict,           
             enable_peak_reorder = config['decode_limit_period']>0,
             fail_detect_dict = fail_detect_dict,
+            no_fail_detect_auto_block_list = config['no_auto_block'],
             block_on_detect_fail_time = config['block_on_detect_fail_time'],
             block_on_detect_fail_count = config['block_on_detect_fail_count'],
             )

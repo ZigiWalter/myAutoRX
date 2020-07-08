@@ -418,6 +418,7 @@ class SondeScanner(object):
         temporary_block_time = 60,
         detect_attemp_dict = [],
         fail_detect_dict = [],
+        no_fail_detect_auto_block_list = [],
         enable_peak_reorder = False,
         ngp_tweak = False,
         block_on_detect_fail_time = 0,
@@ -494,6 +495,7 @@ class SondeScanner(object):
 
         self.detect_attemp_dict = detect_attemp_dict
         self.fail_detect_dict = fail_detect_dict
+        self.no_fail_detect_auto_block_list = no_fail_detect_auto_block_list
         self.enable_peak_reorder = enable_peak_reorder
         self.block_on_detect_fail_time = block_on_detect_fail_time
         self.block_on_detect_fail_count = block_on_detect_fail_count
@@ -682,9 +684,10 @@ class SondeScanner(object):
                 # Emit a notification to the client that a scan is complete.
                 flask_emit_event('scan_event')
                 #Zigi
-                for _freq in self.fail_detect_dict.copy():
-                    #print("Zeroing count for " + str(_freq/1e6) + " MHz")
-                    del self.fail_detect_dict[_freq]
+                self.cleanupFailDetectDict()
+                #for _freq in self.fail_detect_dict.copy():
+                #    #print("Zeroing count for " + str(_freq/1e6) + " MHz")
+                #    del self.fail_detect_dict[_freq]
                 return []
 
             # Sort peaks by power.
@@ -795,9 +798,10 @@ class SondeScanner(object):
             if ((len(peak_frequencies) == 0) and (len(actualBlockedPeakList) == 0)):
                 self.log_debug("No peaks found after blacklist frequencies removed.")
                 #Zigi
-                for _freq in self.fail_detect_dict.copy():
+                self.cleanupFailDetectDict()
+                #for _freq in self.fail_detect_dict.copy():
                     #print("Zeroing count for " + str(_freq/1e6) + " MHz")
-                    del self.fail_detect_dict[_freq]
+                #    del self.fail_detect_dict[_freq]
                 return []
             else:
                 #self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
@@ -845,25 +849,41 @@ class SondeScanner(object):
             #Zigi
             else:
                 if self.block_on_detect_fail_time > 0:
+                    np_auto_block_list= np.array(self.no_fail_detect_auto_block_list)*1e6
+                    #print(str(_freq/1e6)+" *** " +str(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization/1.5)]))
+                    nowTime = time.time()
                     detect_fail_list.append(_freq)
-                    detect_fail_cnt = self.fail_detect_dict.get(_freq,0) + 1
-                    self.fail_detect_dict[_freq] = detect_fail_cnt
-                    #print("Not detected: " + str (_freq/1000000) + ", cnt: " + str(detect_fail_cnt))
-                    if detect_fail_cnt>=self.block_on_detect_fail_count:
-                        #print("Blocking: " + str(_freq/1e6))
-                        #self.add_temporary_block(_freq)
-                        self.temporary_block_list_lock.acquire()
-                        self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
-                        self.temporary_block_list_lock.release()
-                        #print("Z2: " + str(self.temporary_block_list))
-                        self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
-                        del self.fail_detect_dict[_freq]
- 
+                    if _freq in self.fail_detect_dict:
+                        (prevDetectionTime, detect_fail_cnt) = self.fail_detect_dict[_freq]
+                        detect_fail_cnt = detect_fail_cnt + 1
+                        #print("Not detected: " + str (_freq/1000000) + ", cnt: " + str(detect_fail_cnt))
+                        if detect_fail_cnt>=self.block_on_detect_fail_count:
+                            #print("Blocking: " + str(_freq/1e6))
+                            #self.add_temporary_block(_freq)
+                            self.fail_detect_dict[_freq] = (nowTime, 0)
+                            #if _freq not in self.no_fail_detect_auto_block_list:
+                            if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization/1.5)])==0:
+                                self.temporary_block_list_lock.acquire()
+                                self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
+                                self.temporary_block_list_lock.release()
+                                #print("Z2: " + str(self.temporary_block_list))
+                                self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                            else:
+                                self.log_info("*** Not Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                        else:
+                            self.fail_detect_dict[_freq] = (nowTime, detect_fail_cnt)
+                            #del self.fail_detect_dict[_freq]
+                    else:
+                        self.fail_detect_dict[_freq] = (nowTime, -self.block_on_detect_fail_count + 1)
+                     
+                     
         if self.block_on_detect_fail_time > 0:
             for _freq in self.fail_detect_dict.copy():
                 if _freq not in detect_fail_list:
                     #print("Zeroing count for " + str(_freq/1e6) + " MHz")
-                    del self.fail_detect_dict[_freq]
+                    (prevDetectionTime, detect_fail_cnt) = self.fail_detect_dict[_freq]
+                    self.fail_detect_dict[_freq] = (prevDetectionTime, 0)
+            self.cleanupFailDetectDict()
                     
             #for _freq in detect_fail_list :   
                 
@@ -965,6 +985,16 @@ class SondeScanner(object):
         """
         logging.warning("Scanner #%s - %s" % (self.device_idx,line))
 
+    #Zigi
+    def cleanupFailDetectDict(self):
+        for _freq in self.fail_detect_dict.copy():
+            (prevDetectionTime, detect_fail_cnt) = self.fail_detect_dict[_freq]
+            if prevDetectionTime + 5 <= prevDetectionTime:
+                print("Removing " + str(_freq) + " MHz")
+                del self.fail_detect_dict[_freq]
+            
+            
+            
 
 if __name__ == "__main__":
     # Basic test script - run a scan using default parameters.

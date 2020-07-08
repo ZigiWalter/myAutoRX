@@ -149,7 +149,8 @@ def read_auto_rx_config(filename, no_sdr_test=False):
                 'brownlist'	: [],
                 'black_types' : [],
                 'block_on_detect_fail_time' : 0,
-                'block_on_detect_fail_count' : 5
+                'block_on_detect_fail_count' : 5,
+                'no_auto_block' : []
 	}
 
 
@@ -215,6 +216,7 @@ def read_auto_rx_config(filename, no_sdr_test=False):
                 auto_rx_config['black_types'] = json.loads(config.get('filtering', 'black_types'))
                 auto_rx_config['block_on_detect_fail_time'] = config.getint('filtering', 'block_on_detect_fail_time')
                 auto_rx_config['block_on_detect_fail_count'] = config.getint('filtering', 'block_on_detect_fail_count')
+                auto_rx_config['no_auto_block'] = json.loads(config.get('filtering', 'no_auto_block'))
                 
 		# Habitat Settings
 		auto_rx_config['habitat_enabled'] = config.getboolean('habitat', 'habitat_enabled')
