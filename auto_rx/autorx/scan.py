@@ -875,8 +875,8 @@ class SondeScanner(object):
                                 self.temporary_block_list_lock.release()
                                 #print("Z2: " + str(self.temporary_block_list))
                                 self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
-                            else:
-                                self.log_info("*** Not Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                            #else:
+                                #self.log_info("*** Not Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
                         else:
                             self.fail_detect_dict[_freq] = (nowTime, detect_fail_cnt, False)
                             #del self.fail_detect_dict[_freq]
