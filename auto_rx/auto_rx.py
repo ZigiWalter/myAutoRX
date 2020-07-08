@@ -153,6 +153,7 @@ def start_scanner():
             no_fail_detect_auto_block_list = config['no_auto_block'],
             block_on_detect_fail_time = config['block_on_detect_fail_time'],
             block_on_detect_fail_count = config['block_on_detect_fail_count'],
+            block_on_first_detect_fail_count = config['block_on_first_detect_fail_count']
             )
 
         # Add a reference into the sdr_list entry

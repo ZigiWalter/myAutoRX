@@ -422,7 +422,8 @@ class SondeScanner(object):
         enable_peak_reorder = False,
         ngp_tweak = False,
         block_on_detect_fail_time = 0,
-        block_on_detect_fail_count = 5 
+        block_on_detect_fail_count = 5,
+        block_on_first_detect_fail_count = 10
                  ):
         """ Initialise a Sonde Scanner Object.
 
@@ -499,6 +500,7 @@ class SondeScanner(object):
         self.enable_peak_reorder = enable_peak_reorder
         self.block_on_detect_fail_time = block_on_detect_fail_time
         self.block_on_detect_fail_count = block_on_detect_fail_count
+        self.block_on_first_detect_fail_count = block_on_first_detect_fail_count
         # Alert the user if there are temporary blocks in place.
         if len(self.temporary_block_list.keys())>0:
             self.log_info("Temporary blocks in place for frequencies: %s" % str(self.temporary_block_list.keys()))
@@ -834,8 +836,10 @@ class SondeScanner(object):
 
             if detected != None:
                 # Quantize the detected frequency (with offset) to 1 kHz
-                _freq = round((_freq + offset_est)/1000.0)*1000.0
-
+                _freq = round(_freq/1000.0)*1000.0
+                #Zigi
+                if _freq in self.fail_detect_dict:
+                    del self.fail_detect_dict[_freq]
 
                 # Add a detected sonde to the output array
                 _search_results.append([_freq, detected])
@@ -848,21 +852,24 @@ class SondeScanner(object):
       
             #Zigi
             else:
+                _freq = round(_freq /1000.0)*1000.0
                 if self.block_on_detect_fail_time > 0:
                     np_auto_block_list= np.array(self.no_fail_detect_auto_block_list)*1e6
                     #print(str(_freq/1e6)+" *** " +str(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization/1.5)]))
                     nowTime = time.time()
                     detect_fail_list.append(_freq)
                     if _freq in self.fail_detect_dict:
-                        (prevDetectionTime, detect_fail_cnt) = self.fail_detect_dict[_freq]
-                        detect_fail_cnt = detect_fail_cnt + 1
+                        #print("***[" + str(_freq) + "]" + str(self.fail_detect_dict[_freq]))
+                        (prevDetectionTime, detect_fail_cnt, wasBlocked) = self.fail_detect_dict[_freq]
+                        detect_fail_cnt = detect_fail_cnt - 1
                         #print("Not detected: " + str (_freq/1000000) + ", cnt: " + str(detect_fail_cnt))
-                        if detect_fail_cnt>=self.block_on_detect_fail_count:
+                        if detect_fail_cnt<=0:
                             #print("Blocking: " + str(_freq/1e6))
                             #self.add_temporary_block(_freq)
-                            self.fail_detect_dict[_freq] = (nowTime, 0)
+                            self.fail_detect_dict[_freq] = (nowTime, self.block_on_detect_fail_count-1, True)
                             #if _freq not in self.no_fail_detect_auto_block_list:
-                            if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization/1.5)])==0:
+                            #if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization)])==0:
+                            if _freq/1e6 not in self.no_fail_detect_auto_block_list:
                                 self.temporary_block_list_lock.acquire()
                                 self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
                                 self.temporary_block_list_lock.release()
@@ -871,18 +878,22 @@ class SondeScanner(object):
                             else:
                                 self.log_info("*** Not Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
                         else:
-                            self.fail_detect_dict[_freq] = (nowTime, detect_fail_cnt)
+                            self.fail_detect_dict[_freq] = (nowTime, detect_fail_cnt, False)
                             #del self.fail_detect_dict[_freq]
                     else:
-                        self.fail_detect_dict[_freq] = (nowTime, -self.block_on_detect_fail_count + 1)
+                        self.fail_detect_dict[_freq] = (nowTime, self.block_on_first_detect_fail_count-1 , False)
                      
                      
         if self.block_on_detect_fail_time > 0:
             for _freq in self.fail_detect_dict.copy():
                 if _freq not in detect_fail_list:
                     #print("Zeroing count for " + str(_freq/1e6) + " MHz")
-                    (prevDetectionTime, detect_fail_cnt) = self.fail_detect_dict[_freq]
-                    self.fail_detect_dict[_freq] = (prevDetectionTime, 0)
+                    (prevDetectionTime, detect_fail_cnt, wasBlocked) = self.fail_detect_dict[_freq]
+                    if wasBlocked:
+                        self.fail_detect_dict[_freq] = (prevDetectionTime, self.block_on_detect_fail_count-1, wasBlocked)
+                    else:
+                        #self.fail_detect_dict[_freq] = (prevDetectionTime, -self.block_on_first_detect_fail_count + self.block_on_detect_fail_count + 1, wasBlocked)
+                        del self.fail_detect_dict[_freq]
             self.cleanupFailDetectDict()
                     
             #for _freq in detect_fail_list :   
@@ -988,9 +999,9 @@ class SondeScanner(object):
     #Zigi
     def cleanupFailDetectDict(self):
         for _freq in self.fail_detect_dict.copy():
-            (prevDetectionTime, detect_fail_cnt) = self.fail_detect_dict[_freq]
-            if prevDetectionTime + 5 <= prevDetectionTime:
-                print("Removing " + str(_freq) + " MHz")
+            (prevDetectionTime, detect_fail_cnt, wasBlocked) = self.fail_detect_dict[_freq]
+            if prevDetectionTime + self.block_on_detect_fail_time*60*2 <= time.time():
+                print("Removing " + str(_freq/1e6) + " MHz")
                 del self.fail_detect_dict[_freq]
             
             
