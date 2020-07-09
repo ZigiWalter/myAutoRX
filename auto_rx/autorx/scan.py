@@ -1000,8 +1000,8 @@ class SondeScanner(object):
     def cleanupFailDetectDict(self):
         for _freq in self.fail_detect_dict.copy():
             (prevDetectionTime, detect_fail_cnt, wasBlocked) = self.fail_detect_dict[_freq]
-            if prevDetectionTime + self.block_on_detect_fail_time*60*2 <= time.time():
-                print("Removing " + str(_freq/1e6) + " MHz")
+            if prevDetectionTime + self.block_on_detect_fail_time*60*4 <= time.time():
+                #print("Removing " + str(_freq/1e6) + " MHz")
                 del self.fail_detect_dict[_freq]
             
             
