@@ -866,7 +866,7 @@ class SondeScanner(object):
                         if detect_fail_cnt<=0:
                             #print("Blocking: " + str(_freq/1e6))
                             #self.add_temporary_block(_freq)
-                            self.fail_detect_dict[_freq] = (nowTime, self.block_on_detect_fail_count-1, True)
+                            self.fail_detect_dict[_freq] = (nowTime, self.block_on_detect_fail_count, True)
                             #if _freq not in self.no_fail_detect_auto_block_list:
                             #if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization)])==0:
                             if _freq/1e6 not in self.no_fail_detect_auto_block_list:
@@ -890,7 +890,7 @@ class SondeScanner(object):
                     #print("Zeroing count for " + str(_freq/1e6) + " MHz")
                     (prevDetectionTime, detect_fail_cnt, wasBlocked) = self.fail_detect_dict[_freq]
                     if wasBlocked:
-                        self.fail_detect_dict[_freq] = (prevDetectionTime, self.block_on_detect_fail_count-1, wasBlocked)
+                        self.fail_detect_dict[_freq] = (prevDetectionTime, self.block_on_detect_fail_count, wasBlocked)
                     else:
                         #self.fail_detect_dict[_freq] = (prevDetectionTime, -self.block_on_first_detect_fail_count + self.block_on_detect_fail_count + 1, wasBlocked)
                         del self.fail_detect_dict[_freq]
