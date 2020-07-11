@@ -70,7 +70,7 @@ gpsd_adaptor = None
 temporary_block_list = {}
 
 #Zigi
-detect_attemp_dict = {}
+decode_attemp_dict = {}
 fail_detect_dict = {}
 
 def allocate_sdr(check_only = False, task_description = ""):
@@ -103,7 +103,7 @@ def allocate_sdr(check_only = False, task_description = ""):
 def start_scanner():
     """ Start a scanner thread on the first available SDR """
     global config, RS_PATH, temporary_block_list
-    global detect_attemp_dict
+    global decode_attemp_dict
     global fail_detect_dict
     
     if 'SCAN' in autorx.task_list:
@@ -147,7 +147,7 @@ def start_scanner():
             save_detection_audio = config['save_detection_audio'],
             temporary_block_list = temporary_block_list,
             temporary_block_time = config['temporary_block_time'],
-            detect_attemp_dict = detect_attemp_dict,           
+            decode_attemp_dict = decode_attemp_dict,           
             enable_peak_reorder = config['decode_limit_period']>0,
             fail_detect_dict = fail_detect_dict,
             no_fail_detect_auto_block_list = config['no_auto_block'],
@@ -192,7 +192,7 @@ def start_decoder(freq, sonde_type):
 
     """
     global config, RS_PATH, exporter_functions, rs92_ephemeris, temporary_block_list
-    global detect_attemp_dict
+    global decode_attemp_dict
     
     # Allocate a SDR.
     _device_idx = allocate_sdr(task_description="Decoder (%s, %.3f MHz)" % (sonde_type, freq/1e6))
@@ -252,7 +252,7 @@ def handle_scan_results():
     - If there is no free SDR, but a scanner is running, stop the scanner and start decoding.
     """
     global config, temporary_block_list
-    global detect_attemp_dict
+    global decode_attemp_dict
 
     if autorx.scan_results.qsize() > 0:
         # Grab the latest detections from the scan result queue.
@@ -341,7 +341,7 @@ def handle_scan_results():
 
 def clean_task_list():
     """ Check the task list to see if any tasks have stopped running. If so, release the associated SDR """
-    global detect_attemp_dict
+    global decode_attemp_dict
     global fail_detect_dict
     for _key in autorx.task_list.copy().keys():
         # Attempt to get the state of the task
@@ -386,13 +386,13 @@ def clean_task_list():
             # This task was a decoder, and it has encountered an locked-out sonde.
             if (config['decode_limit_period']>0):
                 #logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
-                for attemptFreq in detect_attemp_dict.copy().keys():
+                for attemptFreq in decode_attemp_dict.copy().keys():
                     if np.abs(attemptFreq-_key)<(10000/2.0):
-                        detect_attemp_dict.pop(attemptFreq)
+                        decode_attemp_dict.pop(attemptFreq)
                         #print("Reordering:" +str(attemptFreq))
-                detect_attemp_dict[_key]=time.time()
+                decode_attemp_dict[_key]=time.time()
                 #print("Added:" +str(_key))
-                #print(detect_attemp_dict)      
+                #print(decode_attemp_dict)      
                     
                 #_index = np.argwhere(np.abs(np.array(detect_attemp_list)-_key)<(10000/2.0))
                 #detect_attemp_np = np.delete(detect_attemp_list, _index)
@@ -416,9 +416,9 @@ def clean_task_list():
     #Zigi
     if (config['decode_limit_period']>0):
         #logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
-        for attemptFreq in detect_attemp_dict.copy().keys():
-            if((time.time()-detect_attemp_dict[attemptFreq])>=((2*len(detect_attemp_dict.copy().keys())+1)*config['decode_limit_period']*60)):
-                detect_attemp_dict.pop(attemptFreq)
+        for attemptFreq in decode_attemp_dict.copy().keys():
+            if((time.time()-decode_attemp_dict[attemptFreq])>=((2*len(decode_attemp_dict.copy().keys())+1)*config['decode_limit_period']*60)):
+                decode_attemp_dict.pop(attemptFreq)
                 #print("Removing:" +str(attemptFreq))
                 
     # Clean out the temporary block list of old entries.

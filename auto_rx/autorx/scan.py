@@ -416,7 +416,7 @@ class SondeScanner(object):
         save_detection_audio = False,
         temporary_block_list = {},
         temporary_block_time = 60,
-        detect_attemp_dict = [],
+        decode_attemp_dict = [],
         fail_detect_dict = [],
         no_fail_detect_auto_block_list = [],
         enable_peak_reorder = False,
@@ -494,7 +494,7 @@ class SondeScanner(object):
         self.temporary_block_list_lock = Lock()
         self.temporary_block_time = temporary_block_time
 
-        self.detect_attemp_dict = detect_attemp_dict
+        self.decode_attemp_dict = decode_attemp_dict
         self.fail_detect_dict = fail_detect_dict
         self.no_fail_detect_auto_block_list = no_fail_detect_auto_block_list
         self.enable_peak_reorder = enable_peak_reorder
@@ -758,7 +758,7 @@ class SondeScanner(object):
                     #print("detect_attemp_list:"+ str(np.array(self.detect_attemp_list)/1e6))
                     #print("peak_frequencies before: " +str(np.array(peak_frequencies)/1e6))
                 
-                sorted_attempts = sorted(self.detect_attemp_dict.items(), key=operator.itemgetter(1))
+                sorted_attempts = sorted(self.decode_attemp_dict.items(), key=operator.itemgetter(1))
                 #if(len(sorted_attempts)>0):
                     #print(str(sorted_attempts))
                 for attempt in sorted_attempts:
@@ -867,16 +867,19 @@ class SondeScanner(object):
                             #print("Blocking: " + str(_freq/1e6))
                             #self.add_temporary_block(_freq)
                             self.fail_detect_dict[_freq] = (nowTime, self.block_on_detect_fail_count, True)
-                            #if _freq not in self.no_fail_detect_auto_block_list:
                             #if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization)])==0:
+                            #if _freq/1e6 in self.decode_attemp_dict and (self.decode_attemp_dict[_freq/1e6]+30*60)>time.time():
+                                #print("***ZZZ1 " + str(_freq/1e6))
                             if _freq/1e6 not in self.no_fail_detect_auto_block_list:
-                                self.temporary_block_list_lock.acquire()
-                                self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
-                                self.temporary_block_list_lock.release()
-                                #print("Z2: " + str(self.temporary_block_list))
-                                self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
-                            #else:
-                                #self.log_info("*** Not Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                                #Check if it that frequency was recently decoded
+                                if _freq/1e6 not in self.decode_attemp_dict or (self.decode_attemp_dict[_freq/1e6]+30*60)<time.time():
+                                    self.temporary_block_list_lock.acquire()
+                                    self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
+                                    self.temporary_block_list_lock.release()
+                                    #print("Z2: " + str(self.temporary_block_list))
+                                    self.log_info("Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
+                                #else:
+                                    #self.log_info("*** Not Adding temporary block for frequency %.3f MHz." % (_freq/1e6))
                         else:
                             self.fail_detect_dict[_freq] = (nowTime, detect_fail_cnt, False)
                             #del self.fail_detect_dict[_freq]
