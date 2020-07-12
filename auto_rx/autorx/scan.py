@@ -836,7 +836,7 @@ class SondeScanner(object):
 
             if detected != None:
                 # Quantize the detected frequency (with offset) to 1 kHz
-                _freq = round(_freq/1000.0)*1000.0
+                _freq = round((_freq + offset_est)/1000.0)*1000.0
                 #Zigi
                 if _freq in self.fail_detect_dict:
                     del self.fail_detect_dict[_freq]
@@ -852,7 +852,8 @@ class SondeScanner(object):
       
             #Zigi
             else:
-                _freq = round(_freq /1000.0)*1000.0
+                _freq = round(_freq/1000.0)*1000.0
+
                 if self.block_on_detect_fail_time > 0:
                     np_auto_block_list= np.array(self.no_fail_detect_auto_block_list)*1e6
                     #print(str(_freq/1e6)+" *** " +str(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization/1.5)]))
