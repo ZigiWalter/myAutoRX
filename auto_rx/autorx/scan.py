@@ -869,11 +869,11 @@ class SondeScanner(object):
                             #self.add_temporary_block(_freq)
                             self.fail_detect_dict[_freq] = (nowTime, self.block_on_detect_fail_count, True)
                             #if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization)])==0:
-                            #if _freq/1e6 in self.decode_attemp_dict and (self.decode_attemp_dict[_freq/1e6]+30*60)>time.time():
+                            #if _freq in self.decode_attemp_dict and (self.decode_attemp_dict[_freq]+30*60)>time.time():
                                 #print("***ZZZ1 " + str(_freq/1e6))
                             if _freq/1e6 not in self.no_fail_detect_auto_block_list:
                                 #Check if it that frequency was recently decoded
-                                if _freq/1e6 not in self.decode_attemp_dict or (self.decode_attemp_dict[_freq/1e6]+30*60)<time.time():
+                                if _freq not in self.decode_attemp_dict or (self.decode_attemp_dict[_freq]+30*60)<time.time():
                                     self.temporary_block_list_lock.acquire()
                                     self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
                                     self.temporary_block_list_lock.release()
