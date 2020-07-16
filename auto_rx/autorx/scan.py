@@ -853,7 +853,11 @@ class SondeScanner(object):
             #Zigi
             else:
                 _freq = round(_freq/1000.0)*1000.0
-
+                
+                #print("ZZZ2:" + str(_freq))
+                #print(self.fail_detect_dict)
+                #print(self.decode_attemp_dict)
+                
                 if self.block_on_detect_fail_time > 0:
                     np_auto_block_list= np.array(self.no_fail_detect_auto_block_list)*1e6
                     #print(str(_freq/1e6)+" *** " +str(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization/1.5)]))
@@ -869,11 +873,11 @@ class SondeScanner(object):
                             #self.add_temporary_block(_freq)
                             self.fail_detect_dict[_freq] = (nowTime, self.block_on_detect_fail_count, True)
                             #if len(np_auto_block_list[np.abs(np_auto_block_list-_freq) <= (self.quantization)])==0:
-                            #if _freq in self.decode_attemp_dict and (self.decode_attemp_dict[_freq]+30*60)>time.time():
+                            #if self.checkIfRecentlyDecoded(_freq,self.decode_attemp_dict):
                                 #print("***ZZZ1 " + str(_freq/1e6))
                             if _freq/1e6 not in self.no_fail_detect_auto_block_list:
                                 #Check if it that frequency was recently decoded
-                                if _freq not in self.decode_attemp_dict or (self.decode_attemp_dict[_freq]+30*60)<time.time():
+                                if not self.checkIfRecentlyDecoded(_freq,self.decode_attemp_dict):
                                     self.temporary_block_list_lock.acquire()
                                     self.temporary_block_list[_freq] = time.time() - self.temporary_block_time*60 + self.block_on_detect_fail_time*60
                                     self.temporary_block_list_lock.release()
@@ -1008,7 +1012,11 @@ class SondeScanner(object):
                 #print("Removing " + str(_freq/1e6) + " MHz")
                 del self.fail_detect_dict[_freq]
             
-            
+    def checkIfRecentlyDecoded(self,freq,decode_attemp_dict):
+        for decodedFreq in decode_attemp_dict:
+            if(abs(freq-decodedFreq)<self.quantization) and (time.time()-decode_attemp_dict[decodedFreq])<30*60:
+                return True
+        return False
             
 
 if __name__ == "__main__":
