@@ -126,6 +126,8 @@ class EmailNotification(object):
                 #msg += 'https://tracker.habhub.org/#!qm=All&q=RS_%s\n' % _id
                 msg += 'https://sondehub.org/%s\n' % _id
                 msg += 'http://' + myIp + ':5000\n'
+                #msg += 'https://www.google.com/maps/@%.5f,%.5f,17z\n' % (telemetry['lat'], telemetry['lon'])
+                msg += 'http://maps.google.com/maps?q=%.6f,%.6f&ll=%.6f,%.6f&z=17\n' % (telemetry['lat'], telemetry['lon'], telemetry['lat'], telemetry['lon'])
                 # Construct subject
                 _subject = "[" + hostname + "] " + self.mail_subject
                 _subject = _subject.replace('<id>', telemetry['id'])
