@@ -17,6 +17,7 @@ from base64 import b64encode
 from hashlib import sha256
 from threading import Thread, Lock
 from . import __version__ as auto_rx_version
+
 try:
     # Python 2
     from Queue import Queue
@@ -748,7 +749,12 @@ class HabitatUploader(object):
             telemetry (dict): Telemetry dictionary to add to the input queue.
 
         """
-
+        if 'Upload_Control' in telemetry and telemetry['Upload_Control'] == False:
+            return
+        #closeAndLow = telemetry['lat']<32.96 and telemetry['lon']<35.45 and telemetry['alt']<10000
+        #if (telemetry['lat']>32.95 or (telemetry['lat']>32.680476 and telemetry['lon']>35.409422)) and not closeAndLow and 'IMET' in telemetry['id']:
+            #print("Lat: %f" % (telemetry['lat']))
+      
         # Discard any telemetry which is indicated to be encrypted.
         if 'encrypted' in telemetry:
             if telemetry['encrypted'] == True:

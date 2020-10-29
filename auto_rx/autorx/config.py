@@ -153,7 +153,9 @@ def read_auto_rx_config(filename, no_sdr_test=False):
                 'block_on_detect_fail_time' : 0,
                 'block_on_detect_fail_count' : 5,
                 'block_on_first_detect_fail_count' :10,
-                'no_auto_block' : []
+                'no_auto_block' : [],
+                'imet_upload_filter_polygon_lat' : [],
+                'imet_upload_filter_polygon_lon' : []
 	}
 
 
@@ -221,6 +223,8 @@ def read_auto_rx_config(filename, no_sdr_test=False):
                 auto_rx_config['block_on_detect_fail_count'] = config.getint('filtering', 'block_on_detect_fail_count')
                 auto_rx_config['block_on_first_detect_fail_count'] = config.getint('filtering', 'block_on_first_detect_fail_count')
                 auto_rx_config['no_auto_block'] = json.loads(config.get('filtering', 'no_auto_block'))
+                auto_rx_config['imet_upload_filter_polygon_lat'] = json.loads(config.get('filtering', 'imet_upload_filter_polygon_lat'))
+                auto_rx_config['imet_upload_filter_polygon_lon'] = json.loads(config.get('filtering', 'imet_upload_filter_polygon_lon'))
                 
 		# Habitat Settings
 		auto_rx_config['habitat_enabled'] = config.getboolean('habitat', 'habitat_enabled')

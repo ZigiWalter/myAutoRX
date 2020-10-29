@@ -462,5 +462,6 @@ block_on_detect_fail_count = 3
 block_on_detect_fail_time = 20
 #Never auto-block these frequencies in case of failing detect attempts
 no_auto_block = [402.0,402.87,403.0,404.0,405.0,405.5,406.0]
-
-
+#Supress uploading of new IMet sonde in this polygon
+imet_upload_filter_polygon_lat=[]
+imet_upload_filter_polygon_lon=[]

@@ -20,8 +20,7 @@ from .gps import get_ephemeris, get_almanac
 from .sonde_specific import *
 from .fsk_demod import FSKDemodStats
 import numpy as np
-
-#brown_list=[403.0]
+from shapely.geometry import Point, Polygon
 
 # Global valid sonde types list.
 VALID_SONDE_TYPES = ['RS92', 'RS41', 'DFM', 'M10', 'M20', 'IMET', 'MK2LMS', 'LMS6', 'MEISEI', 'UDP']
@@ -99,6 +98,7 @@ class SondeDecoder(object):
         decode_limit_min_alt=3000,
         brownlist = [],
         black_types = [],
+        imet_upload_filter_polygon = [],
         imet_location = "SONDE"
         ):
         """ Initialise and start a Sonde Decoder.
@@ -158,6 +158,7 @@ class SondeDecoder(object):
         self.decode_limit_min_alt = decode_limit_min_alt
         self.brownlist = brownlist
         self.black_types = black_types
+        self.imet_upload_filter_polygon = Polygon(imet_upload_filter_polygon)
         self.imet_location = imet_location
 
         # iMet ID store. We latch in the first iMet ID we calculate, to avoid issues with iMet-1-RS units
@@ -955,6 +956,9 @@ class SondeDecoder(object):
                 self.decoder_running=False;
                 return False  
             
+            if self.isUploadFilter(_telemetry):
+                _telemetry['Upload_Control'] = False
+
             # If the telemetry is OK, send to the exporter functions (if we have any).
             if self.exporters is None:
                 return
@@ -1022,18 +1026,24 @@ class SondeDecoder(object):
             return False
         if((self.firstPacket==0) or ((time.time()-self.firstPacket)<45)):
             return False
-        northWest = (33.550000, 34.700000)
-        southEast = (30.800000, 38.500000)
-        #northWest = (33.389341, 34.538769)
-        #southEast = (31.473511, 36.926776)
+        #northWest = (33.550000, 34.700000)
+        #southEast = (30.800000, 38.500000)
+        northWest = (33.597182, 35.097309)
+        southEast = (32.961972, 37.5)
         #logging.info("Decoder Lock-out n #%s %s %.3f - %s" % (str(self.device_idx), self.sonde_type, self.sonde_freq/1e6, telemetry))
         #_payload = (telemetry['lat'], telemetry['lon'], telemetry['alt'])
-        if((telemetry['lat']>southEast[0]) and (telemetry['lat']<northWest[0]) and (telemetry['lon']<southEast[1]) and (telemetry['lon']>northWest[1])):        
+        if('IMET' in telemetry['id'] and telemetry['alt'] > 3000 and (telemetry['lat']>southEast[0]) and (telemetry['lat']<northWest[0]) and (telemetry['lon']<southEast[1]) and (telemetry['lon']>northWest[1])):        
             return True
         else:
             return False
 
-
+    def isUploadFilter(self, telemetry):
+        #if len(self.imet_upload_filter_polygon)==0:
+        #   return False     
+        if 'IMET' in telemetry['id'] and Point(telemetry['lat'],telemetry['lon']).within(self.imet_upload_filter_polygon) and (telemetry['frame']<60*60 or telemetry['alt']>3000):
+            return True
+        return False
+        
 if __name__ == "__main__":
     # Test script.
     from .logger import TelemetryLogger

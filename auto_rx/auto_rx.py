@@ -238,7 +238,8 @@ def start_decoder(freq, sonde_type):
             decode_limit_period = config['decode_limit_period'],
             decode_limit_min_alt = config['decode_limit_min_alt'],
             brownlist = config['brownlist'],
-            black_types = config['black_types'],  
+            black_types = config['black_types'],
+            imet_upload_filter_polygon = zip(config['imet_upload_filter_polygon_lat'],config['imet_upload_filter_polygon_lon'])
             )
         autorx.sdr_list[_device_idx]['task'] = autorx.task_list[freq]['task']
 
