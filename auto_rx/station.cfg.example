@@ -463,5 +463,7 @@ block_on_detect_fail_time = 20
 #Never auto-block these frequencies in case of failing detect attempts
 no_auto_block = [402.0,402.87,403.0,404.0,405.0,405.5,406.0]
 #Supress uploading of new IMet sonde in this polygon
-imet_upload_filter_polygon_lat=[]
-imet_upload_filter_polygon_lon=[]
+#imet_upload_filter_polygon_lat=[]
+#imet_upload_filter_polygon_lon=[]
+imet_upload_filter_polygon_lat=[32.986719, 32.920892, 32.915128, 32.960078, 33.31108, 33.371885, 33.313375, 33.324851, 33.290419, 33.14796, 33.129561, 33.115436, 33.141061, 33.156008, 33.159457, 33.100805]
+imet_upload_filter_polygon_lon=[35.079699, 35.618202, 35.925133, 35.952599, 35.846855, 35.779564, 35.620262, 35.563957, 35.500786, 35.470574, 35.417015, 35.383911, 35.341484, 35.254967, 35.161583, 35.105278]
