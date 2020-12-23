@@ -1040,7 +1040,7 @@ class SondeDecoder(object):
     def isUploadFilter(self, telemetry):
         #if len(self.imet_upload_filter_polygon)==0:
         #   return False     
-        if 'IMET' in telemetry['id'] and Point(telemetry['lat'],telemetry['lon']).within(self.imet_upload_filter_polygon) and telemetry['frame']<60*60:
+        if 'IMET' in telemetry['id'] and Point(telemetry['lat'],telemetry['lon']).within(self.imet_upload_filter_polygon) and telemetry['frame']<60*90:
             return True
         return False
         
