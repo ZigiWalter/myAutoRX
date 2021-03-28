@@ -89,7 +89,9 @@ class SondehubUploader(object):
             telemetry (dict): Telemetry dictionary to add to the input queue.
 
         """
-
+        #Zigi
+        if 'Upload_Control' in telemetry and telemetry['Upload_Control'] == False:
+            return
         # Attempt to reformat the data.
         _telem = self.reformat_data(telemetry)
         # self.log_debug("Telem: %s" % str(_telem))
