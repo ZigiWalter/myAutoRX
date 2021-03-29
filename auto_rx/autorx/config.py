@@ -248,6 +248,17 @@ def read_auto_rx_config(filename, no_sdr_test=False):
         # Position Filtering
         auto_rx_config["max_altitude"] = config.getint("filtering", "max_altitude")
         auto_rx_config["max_radius_km"] = config.getint("filtering", "max_radius_km")
+        auto_rx_config['geo_filter_enable'] = config.getboolean('filtering', 'geo_filter_enable')
+        auto_rx_config['decode_limit_period'] = config.getint('filtering', 'decode_limit_period')
+        auto_rx_config['decode_limit_min_alt'] = config.getint('filtering', 'decode_limit_min_alt')
+        auto_rx_config['brownlist'] = json.loads(config.get('filtering', 'brownlist'))
+        auto_rx_config['black_types'] = json.loads(config.get('filtering', 'black_types'))
+        auto_rx_config['block_on_detect_fail_time'] = config.getint('filtering', 'block_on_detect_fail_time')
+        auto_rx_config['block_on_detect_fail_count'] = config.getint('filtering', 'block_on_detect_fail_count')
+        auto_rx_config['block_on_first_detect_fail_count'] = config.getint('filtering', 'block_on_first_detect_fail_count')
+        auto_rx_config['no_auto_block'] = json.loads(config.get('filtering', 'no_auto_block'))
+        auto_rx_config['imet_upload_filter_polygon_lat'] = json.loads(config.get('filtering', 'imet_upload_filter_polygon_lat'))
+        auto_rx_config['imet_upload_filter_polygon_lon'] = json.loads(config.get('filtering', 'imet_upload_filter_polygon_lon'))
 
         # Habitat Settings
         auto_rx_config["habitat_enabled"] = config.getboolean(
