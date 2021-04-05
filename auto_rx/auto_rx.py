@@ -17,6 +17,13 @@ import time
 import traceback
 import os
 import numpy as np
+
+from dateutil.parser import parse
+
+if sys.version_info < (3, 6):
+    print("CRITICAL - radiosonde_auto_rx requires Python 3.6 or newer!")
+    sys.exit(1)
+
 import autorx
 from autorx.scan import SondeScanner
 from autorx.decode import SondeDecoder, VALID_SONDE_TYPES, DRIFTY_SONDE_TYPES
@@ -1045,7 +1052,7 @@ def main():
 
 if __name__ == "__main__":
 
-    try: 
+    try:
         main()
     except KeyboardInterrupt:
         # Upon CTRL+C, shutdown all threads and exit.
