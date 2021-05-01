@@ -38,7 +38,7 @@ from autorx.utils import (
     rtlsdr_test,
     position_info,
     check_rs_utils,
-    check_autorx_version,
+    version_startup_check,
 )
 from autorx.config import read_auto_rx_config
 from autorx.web import (
@@ -98,7 +98,7 @@ temporary_block_list = {}
 decode_attemp_dict = {}
 fail_detect_dict = {}
 def allocate_sdr(check_only=False, task_description=""):
-    """ Allocate an un-used SDR for a task.
+    """Allocate an un-used SDR for a task.
 
     Args:
         check_only (bool) : If True, don't set the free SDR as in-use. Used to check if there are any free SDRs.
@@ -128,7 +128,7 @@ def allocate_sdr(check_only=False, task_description=""):
 
 
 def start_scanner():
-    """ Start a scanner thread on the first available SDR """
+    """Start a scanner thread on the first available SDR"""
     global config, RS_PATH, temporary_block_list
     global decode_attemp_dict
     global fail_detect_dict
@@ -157,9 +157,9 @@ def start_scanner():
             min_freq=config["min_freq"],
             max_freq=config["max_freq"],
             search_step=config["search_step"],
-            whitelist=config["whitelist"],
-            greylist=config["greylist"],
-            blacklist=config["blacklist"],
+            only_scan=config["only_scan"],
+            always_scan=config["always_scan"],
+            never_scan=config["never_scan"],
             snr_threshold=config["snr_threshold"],
             min_distance=config["min_distance"],
             quantization=config["quantization"],
@@ -193,7 +193,7 @@ def start_scanner():
 
 
 def stop_scanner():
-    """ Stop a currently running scan thread, and release the SDR it was using. """
+    """Stop a currently running scan thread, and release the SDR it was using."""
 
     if "SCAN" not in autorx.task_list:
         # No scanner thread running!
@@ -212,7 +212,7 @@ def stop_scanner():
 
 
 def start_decoder(freq, sonde_type):
-    """ Attempt to start a decoder thread for a given sonde.
+    """Attempt to start a decoder thread for a given sonde.
 
     Args:
         freq (float): Radiosonde frequency in Hz.
@@ -275,7 +275,7 @@ def start_decoder(freq, sonde_type):
 
 
 def handle_scan_results():
-    """ Read in Scan results via the scan results Queue.
+    """Read in Scan results via the scan results Queue.
 
     Depending on how many SDRs are available, two things can happen:
     - If there is a free SDR, allocate it to a decoder.
@@ -314,7 +314,7 @@ def handle_scan_results():
                             if abs(_key - _freq) < config["decoder_spacing_limit"]:
                                 # At this point, we can be pretty sure that there is another decoder already decoding this particular sonde ID.
                                 # Without actually starting another decoder and matching IDs, we can't be 100% sure, but it's a good chance.
-                                logging.error(
+                                logging.warning(
                                     "Task Manager - Detected %s sonde on %.3f MHz, but this is within %d kHz of an already running decoder. (This limit can be set using the 'decoder_spacing_limit' advanced config option.)"
                                     % (
                                         _type,
@@ -335,7 +335,7 @@ def handle_scan_results():
                     if temporary_block_list[_freq] > (
                         time.time() - config["temporary_block_time"] * 60
                     ):
-                        logging.error(
+                        logging.warning(
                             "Task Manager - Attempted to start a decoder on a temporarily blocked frequency (%.3f MHz)"
                             % (_freq / 1e6)
                         )
@@ -364,7 +364,7 @@ def handle_scan_results():
 
                 # Break if we don't support this sonde type.
                 if _check_type not in VALID_SONDE_TYPES:
-                    logging.error(
+                    logging.warning(
                         "Task Manager - Unsupported sonde type: %s" % _check_type
                     )
                     # TODO - Potentially add the frequency of the unsupported sonde to the temporary block list?
@@ -389,7 +389,7 @@ def handle_scan_results():
 
 
 def clean_task_list():
-    """ Check the task list to see if any tasks have stopped running. If so, release the associated SDR """
+    """Check the task list to see if any tasks have stopped running. If so, release the associated SDR"""
     global decode_attemp_dict
     global fail_detect_dict
 
@@ -515,7 +515,7 @@ def clean_task_list():
 
 
 def stop_all():
-    """ Shut-down all decoders, scanners, and exporters. """
+    """Shut-down all decoders, scanners, and exporters."""
     global exporter_objects
     logging.info("Starting shutdown of all threads.")
     for _task in autorx.task_list.keys():
@@ -535,7 +535,7 @@ def stop_all():
 
 
 def telemetry_filter(telemetry):
-    """ Filter incoming radiosonde telemetry based on various factors,
+    """Filter incoming radiosonde telemetry based on various factors,
         - Invalid Position
         - Invalid Altitude
         - Abnormal range from receiver.
@@ -614,6 +614,19 @@ def telemetry_filter(telemetry):
             )
             return "TempBlock"
 
+    # DateTime Check
+    _delta_time = (
+        datetime.datetime.now(datetime.timezone.utc) - parse(telemetry["datetime"])
+    ).total_seconds()
+    logging.debug("Delta time: %d" % _delta_time)
+
+    if abs(_delta_time) > (3600 * config["sonde_time_threshold"]):
+        logging.warning(
+            "Sonde reported time too far from current UTC time. Either sonde time or system time is invalid. (Threshold: %d hours)"
+            % config["sonde_time_threshold"]
+        )
+        return False
+
     # Payload Serial Number Checks
     _serial = telemetry["id"]
     # Run a Regex to match known Vaisala RS92/RS41 serial numbers (YWWDxxxx)
@@ -624,9 +637,11 @@ def telemetry_filter(telemetry):
     # ~2025-2030, so have expanded the regex to match (and also support some older RS92s)
     vaisala_callsign_valid = re.match(r"[E-Z][0-5][\d][1-7]\d{4}", _serial)
 
-    # Regex to check DFM callsigns are valid.
-    # DFM serial numbers have at least 6 numbers (newer sondes have 8)
-    dfm_callsign_valid = re.match(r"DFM-\d{6}", _serial)
+    # Just make sure we're not getting the 'xxxxxxxx' unknown serial from the DFM decoder.
+    if "DFM" in telemetry["type"]:
+        dfm_callsign_valid = "x" not in _serial.split("-")[1]
+    else:
+        dfm_callsign_valid = False
 
     # Check Meisei sonde callsigns for validity.
     # meisei_ims returns a callsign of IMS100-xxxxxx until it receives the serial number, so we filter based on the x's being present or not.
@@ -634,7 +649,7 @@ def telemetry_filter(telemetry):
         meisei_callsign_valid = "x" not in _serial.split("-")[1]
     else:
         meisei_callsign_valid = False
-    
+
     if "MRZ" in telemetry["type"]:
         mrz_callsign_valid = "x" not in _serial.split("-")[1]
     else:
@@ -657,7 +672,7 @@ def telemetry_filter(telemetry):
         # Add in a note about DFM sondes and their oddness...
         if "DFM" in telemetry["id"]:
             _id_msg += " Note: DFM sondes may take a while to get an ID."
-        
+
         if "MRZ" in telemetry["id"]:
             _id_msg += " Note: MRZ sondes may take a while to get an ID."
 
@@ -666,7 +681,7 @@ def telemetry_filter(telemetry):
 
 
 def station_position_update(position):
-    """ Handle a callback from GPSDAdaptor object, and update each exporter object. """
+    """Handle a callback from GPSDAdaptor object, and update each exporter object."""
     global exporter_objects
     # Quick sanity check of the incoming data
     if "valid" not in position:
@@ -686,7 +701,7 @@ def station_position_update(position):
 
 
 def email_error(message="foo"):
-    """ Helper function to email an error message, if the email exporter is available """
+    """Helper function to email an error message, if the email exporter is available"""
     global email_exporter
 
     if email_exporter and config["email_error_notifications"]:
@@ -699,7 +714,7 @@ def email_error(message="foo"):
 
 
 def main():
-    """ Main Loop """
+    """Main Loop"""
     global config, exporter_objects, exporter_functions, logging_level, rs92_ephemeris, gpsd_adaptor, email_exporter
 
     # Command line arguments.
@@ -721,7 +736,7 @@ def main():
         "--frequency",
         type=float,
         default=0.0,
-        help="Sonde Frequency Override (MHz). This overrides the scan whitelist with the supplied frequency.",
+        help="Sonde Frequency Override (MHz). This overrides the only_scan list with the supplied frequency.",
     )
     parser.add_argument(
         "-m",
@@ -832,7 +847,9 @@ def main():
     # allows it to run indefinitely.
     if args.type != None:
         if args.type in VALID_SONDE_TYPES:
-            logging.warning("Overriding RX timeout for manually specified radiosonde type. Decoders will not automatically stop!")
+            logging.warning(
+                "Overriding RX timeout for manually specified radiosonde type. Decoders will not automatically stop!"
+            )
             config["rx_timeout"] = 0
             autorx.scan_results.put([[args.frequency * 1e6, args.type]])
         else:
@@ -843,10 +860,10 @@ def main():
     # This needs to occur AFTER logging is setup, else logging breaks horribly for some reason.
     start_flask(host=config["web_host"], port=config["web_port"])
 
-    # If we have been supplied a frequency via the command line, override the whitelist settings
+    # If we have been supplied a frequency via the command line, override the only_scan list settings
     # to only include the supplied frequency.
     if args.frequency != 0.0:
-        config["whitelist"] = [args.frequency]
+        config["only_scan"] = [args.frequency]
 
     # Start our exporter options
     # Telemetry Logger
@@ -881,29 +898,29 @@ def main():
         exporter_objects.append(_email_notification)
         exporter_functions.append(_email_notification.add)
 
-    # Habitat Uploader
-    if config["habitat_enabled"]:
+    # Habitat Uploader - DEPRECATED - Sondehub DB now in use (>1.5.0)
+    # if config["habitat_enabled"]:
 
-        if config["habitat_upload_listener_position"] is False:
-            _habitat_station_position = None
-        else:
-            _habitat_station_position = (
-                config["station_lat"],
-                config["station_lon"],
-                config["station_alt"],
-            )
+    #     if config["habitat_upload_listener_position"] is False:
+    #         _habitat_station_position = None
+    #     else:
+    #         _habitat_station_position = (
+    #             config["station_lat"],
+    #             config["station_lon"],
+    #             config["station_alt"],
+    #         )
 
-        _habitat = HabitatUploader(
-            user_callsign=config["habitat_uploader_callsign"],
-            user_antenna=config["habitat_uploader_antenna"],
-            station_position=_habitat_station_position,
-            synchronous_upload_time=config["habitat_upload_rate"],
-            callsign_validity_threshold=config["payload_id_valid"],
-            url=config["habitat_url"],
-        )
+    #     _habitat = HabitatUploader(
+    #         user_callsign=config["habitat_uploader_callsign"],
+    #         user_antenna=config["habitat_uploader_antenna"],
+    #         station_position=_habitat_station_position,
+    #         synchronous_upload_time=config["habitat_upload_rate"],
+    #         callsign_validity_threshold=config["payload_id_valid"],
+    #         url=config["habitat_url"],
+    #     )
 
-        exporter_objects.append(_habitat)
-        exporter_functions.append(_habitat.add)
+    #     exporter_objects.append(_habitat)
+    #     exporter_functions.append(_habitat.add)
 
     # APRS Uploader
     if config["aprs_enabled"]:
@@ -984,6 +1001,7 @@ def main():
         exporter_objects.append(_rotator)
         exporter_functions.append(_rotator.add)
 
+    # Sondehub v2 Database
     if config["sondehub_enabled"]:
         if config["habitat_upload_listener_position"] is False:
             _sondehub_station_position = None
@@ -993,7 +1011,7 @@ def main():
                 config["station_lon"],
                 config["station_alt"],
             )
-        
+
         _sondehub = SondehubUploader(
             user_callsign=config["habitat_uploader_callsign"],
             user_position=_sondehub_station_position,
@@ -1016,7 +1034,7 @@ def main():
             callback=station_position_update,
         )
 
-    check_autorx_version()
+    version_startup_check()
 
     # Note the start time.
     _start_time = time.time()
