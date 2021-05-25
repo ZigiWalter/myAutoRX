@@ -73,7 +73,7 @@ class EmailNotification(object):
         # Dictionary to track sonde IDs
         self.sondes = {}
 
-        self.max_age = 3600*2 # Only store telemetry for 2 hours
+        self.max_age = 3600 * 2  # Only store telemetry for 2 hours
 
         # Input Queue.
         self.input_queue = Queue()
@@ -267,7 +267,10 @@ class EmailNotification(object):
 
                             msg += "\n"
                             msg += "https://sondehub.org/%s\n" % strip_sonde_serial(_id)
-                            msg += "https://sondehub.org/card/%s\n" % strip_sonde_serial(_id)
+                            msg += (
+                                "https://sondehub.org/card/%s\n"
+                                % strip_sonde_serial(_id)
+                            )
 
                             _subject = "Nearby Radiosonde Landing Detected - %s" % _id
 
