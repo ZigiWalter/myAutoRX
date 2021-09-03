@@ -1520,17 +1520,18 @@ class SondeDecoder(object):
         #locekdOutDB[t)]=telemetry['lon']
         #logging.info("ZZZ: %d" % len(myDB))
         #return False
+        #print(self.geo_filter_enable,time.time(),self.firstPacket)
         if (not self.geo_filter_enable):
             return False
-        if((self.firstPacket==0) or ((time.time()-self.firstPacket)<45)):
+        if((self.firstPacket==0) or ((time.time()-self.firstPacket)<60)):
             return False
-        #northWest = (33.550000, 34.700000)
-        #southEast = (30.800000, 38.500000)
-        northWest = (33.597182, 35.097309)
-        southEast = (32.961972, 37.5)
+        northWest = (33.6, 34.6)
+        southEast = (30.4, 35.8)
+        #print('IMET' in telemetry['id'], telemetry['alt'] > 3000 , (telemetry['lat']>southEast[0]) , (telemetry['lat']<northWest[0])) 
         #logging.info("Decoder Lock-out n #%s %s %.3f - %s" % (str(self.device_idx), self.sonde_type, self.sonde_freq/1e6, telemetry))
         #_payload = (telemetry['lat'], telemetry['lon'], telemetry['alt'])
-        if('IMET' in telemetry['id'] and telemetry['alt'] > 3000 and (telemetry['lat']>southEast[0]) and (telemetry['lat']<northWest[0]) and (telemetry['lon']<southEast[1]) and (telemetry['lon']>northWest[1])):        
+        #if('IMET' in telemetry['id'] and telemetry['alt'] > 3000 and (telemetry['lat']>southEast[0]) and (telemetry['lat']<northWest[0]) and (telemetry['lon']<southEast[1]) and (telemetry['lon']>northWest[1])):        
+        if(telemetry['alt'] > 5000 and (telemetry['lat']>southEast[0]) and (telemetry['lat']<northWest[0]) and (telemetry['lon']<southEast[1]) and (telemetry['lon']>northWest[1])):        
             return True
         else:
             return False
