@@ -1526,7 +1526,7 @@ class SondeDecoder(object):
         if((self.firstPacket==0) or ((time.time()-self.firstPacket)<60)):
             return False
         northWest = (33.6, 34.6)
-        southEast = (30.4, 35.8)
+        southEast = (30.4, 36.8)
         #print('IMET' in telemetry['id'], telemetry['alt'] > 3000 , (telemetry['lat']>southEast[0]) , (telemetry['lat']<northWest[0])) 
         #logging.info("Decoder Lock-out n #%s %s %.3f - %s" % (str(self.device_idx), self.sonde_type, self.sonde_freq/1e6, telemetry))
         #_payload = (telemetry['lat'], telemetry['lon'], telemetry['alt'])
