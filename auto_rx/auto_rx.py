@@ -549,9 +549,13 @@ def telemetry_filter(telemetry):
 
     # First Check: zero lat/lon
     if (telemetry["lat"] == 0.0) and (telemetry["lon"] == 0.0):
+        est_alt_str = "Unknown"
+        if telemetry["pressure"] != -1:
+            est_alt_str = str(int((44331.5 - 4946.62 * (telemetry["pressure"] * 100) ** (0.190263)) * 1.09))
         logging.warning(
-            "Zero Lat/Lon. Sonde %s does not have GPS lock." % telemetry["id"]
+            "Zero Lat/Lon. Sonde %s does not have GPS lock. (Estimated barometric altitude: %s m)" % (telemetry["id"], est_alt_str)
         )
+        
         return False
 
     # Second check: Altitude cap.
@@ -566,9 +570,12 @@ def telemetry_filter(telemetry):
     # Third check: Number of satellites visible.
     if "sats" in telemetry:
         if telemetry["sats"] < 4:
+            est_alt_str = "Unknown"
+            if telemetry["pressure"] != -1:
+                est_alt_str = str(int((44331.5 - 4946.62 * (telemetry["pressure"] * 100) ** (0.190263)) * 1.09))
             logging.warning(
-                "Sonde %s can only see %d SVs - discarding position as bad."
-                % (telemetry["id"], telemetry["sats"])
+                "Sonde %s can only see %d SVs - discarding position as bad. (Estimated barometric altitude: %s m)"
+                % (telemetry["id"], telemetry["sats"], est_alt_str)
             )
             return False
 

@@ -1348,7 +1348,10 @@ class SondeDecoder(object):
                 if _telemetry["sats"] < 4:
                     # No GPS lock means an invalid time, which means we can't accurately calculate a unique ID.
                     # We need to quit at this point before the telemetry processing gos any further.
-                    self.log_error("iMet sonde has no GPS lock - discarding frame.")
+                    est_alt_str = "Unknown"
+                    if _telemetry["pressure"] != -1:
+                        est_alt_str = str(int((44331.5 - 4946.62 * (_telemetry["pressure"] * 100) ** (0.190263)) * 1.09))
+                    self.log_error("iMet sonde has no GPS lock - discarding frame. (Estimated barometric altitude: %s m)" % est_alt_str)            
                     return False
 
                 # Fix up the time.
