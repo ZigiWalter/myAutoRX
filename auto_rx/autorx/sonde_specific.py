@@ -51,7 +51,7 @@ def fix_datetime(datetime_str, local_dt_str=None):
 #
 
 
-def imet_unique_id(telemetry, custom="SONDE", frameRate=1):
+def imet_unique_id(telemetry, custom="SONDE", imet1=False):
     """
 	Generate a 'unique' imet radiosonde ID based on the power-on time, frequency, and an optional location code.
 	This requires the following fields be present in the telemetry dict:
@@ -61,9 +61,17 @@ def imet_unique_id(telemetry, custom="SONDE", frameRate=1):
 	"""
 
     _imet_dt = telemetry["datetime_dt"]
-            
+
+    if imet1:
+        # iMet-1 sondes increment their frame counter TWICE every second, so we need to
+        # compensate for this to be able to determine a power-on time.
+        _frame = telemetry["frame"]//2
+    else:
+        # iMet-4 sondes increment the frame counter once per second.
+        _frame = telemetry["frame"]
+
     # Determine power on time: Current time -  number of frames (one frame per second)
-    _power_on_time = _imet_dt - datetime.timedelta(seconds=telemetry['frame']/frameRate)
+    _power_on_time = _imet_dt - datetime.timedelta(seconds=_frame)
 
     # Round frequency to the nearest 100 kHz (iMet sondes only have 100 kHz frequency steps)
     _freq = round(telemetry["freq_float"] * 10.0) / 10.0
@@ -74,9 +82,6 @@ def imet_unique_id(telemetry, custom="SONDE", frameRate=1):
 
     # Calculate a SHA256 hash of the
     _hash = hashlib.sha256(_temp_str.encode("ascii")).hexdigest().upper()
-    if(frameRate!=1):
-        print("***frameRate="+str(frameRate))
-        print(str(_imet_dt) + " " + str(telemetry['frame'])+ " " + str(_power_on_time) + " " + str(_temp_str))
 
     return "IMET-" + _hash[-8:]
 
