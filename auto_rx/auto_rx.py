@@ -248,6 +248,7 @@ def start_decoder(freq, sonde_type):
             telem_filter=telemetry_filter,
             rs92_ephemeris=rs92_ephemeris,
             rs41_drift_tweak=config["rs41_drift_tweak"],
+            decode_limit_period=config["decode_limit_period"],
             experimental_decoder=config["experimental_decoders"][_exp_sonde_type],
             save_raw_hex=config["save_raw_hex"]
         )

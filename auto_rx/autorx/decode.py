@@ -1504,6 +1504,7 @@ class SondeDecoder(object):
                 self.decoder_running=False;
                 return False
             
+            #print(F"{self.decode_limit_period}, {self.firstPacket}, {(time.time()-self.firstPacket)}, {self.decode_limit_period*60}, {_telemetry['alt']>self.decode_limit_min_alt}")
             if((self.decode_limit_period>0) and (self.firstPacket>0) and ((time.time()-self.firstPacket)>(self.decode_limit_period*60)) and (_telemetry['alt']>self.decode_limit_min_alt)):
                 self.log_info("Reached decode limit period: %.3fMHz, (%.6f,%.6f)" % (self.sonde_freq/1e6,_telemetry['lat'],_telemetry['lon']))
                 self.exit_state = "LIMIT"
