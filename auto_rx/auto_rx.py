@@ -94,6 +94,10 @@ gpsd_adaptor = None
 # This contains frequncies that should be blocked for a short amount of time.
 temporary_block_list = {}
 
+#Zigi
+decode_attemp_dict = {}
+fail_detect_dict = {}
+
 
 def allocate_sdr(check_only=False, task_description=""):
     """Allocate an un-used SDR for a task.
@@ -128,6 +132,8 @@ def allocate_sdr(check_only=False, task_description=""):
 def start_scanner():
     """Start a scanner thread on the first available SDR"""
     global config, RS_PATH, temporary_block_list
+    global decode_attemp_dict
+    global fail_detect_dict
 
     if "SCAN" in autorx.task_list:
         # Already a scanner running! Return.
@@ -171,6 +177,13 @@ def start_scanner():
             ppm=autorx.sdr_list[_device_idx]["ppm"],
             bias=autorx.sdr_list[_device_idx]["bias"],
             save_detection_audio=config["save_detection_audio"],
+            decode_attemp_dict = decode_attemp_dict,           
+            enable_peak_reorder = config['decode_limit_period']>0,
+            fail_detect_dict = fail_detect_dict,
+            no_fail_detect_auto_block_list = config['no_auto_block'],
+            block_on_detect_fail_time = config['block_on_detect_fail_time'],
+            block_on_detect_fail_count = config['block_on_detect_fail_count'],
+            block_on_first_detect_fail_count = config['block_on_first_detect_fail_count'],
             temporary_block_list=temporary_block_list,
             temporary_block_time=config["temporary_block_time"],
         )
@@ -210,6 +223,7 @@ def start_decoder(freq, sonde_type):
 
     """
     global config, RS_PATH, exporter_functions, rs92_ephemeris, temporary_block_list
+    global decode_attemp_dict
 
     # Allocate a SDR.
     _device_idx = allocate_sdr(
@@ -248,7 +262,12 @@ def start_decoder(freq, sonde_type):
             telem_filter=telemetry_filter,
             rs92_ephemeris=rs92_ephemeris,
             rs41_drift_tweak=config["rs41_drift_tweak"],
-            decode_limit_period=config["decode_limit_period"],
+            geo_filter_enable = config['geo_filter_enable'],
+            decode_limit_period = config['decode_limit_period'],
+            decode_limit_min_alt = config['decode_limit_min_alt'],
+            brownlist = config['brownlist'],
+            black_types = config['black_types'],
+            imet_upload_filter_polygon = zip(config['imet_upload_filter_polygon_lat'],config['imet_upload_filter_polygon_lon']),
             experimental_decoder=config["experimental_decoders"][_exp_sonde_type],
             save_raw_hex=config["save_raw_hex"]
         )
@@ -266,6 +285,7 @@ def handle_scan_results():
     - If there is no free SDR, but a scanner is running, stop the scanner and start decoding.
     """
     global config, temporary_block_list
+    global decode_attemp_dict
 
     if autorx.scan_results.qsize() > 0:
         # Grab the latest detections from the scan result queue.
@@ -373,6 +393,8 @@ def handle_scan_results():
 
 def clean_task_list():
     """Check the task list to see if any tasks have stopped running. If so, release the associated SDR"""
+    global decode_attemp_dict
+    global fail_detect_dict
 
     for _key in autorx.task_list.copy().keys():
         # Attempt to get the state of the task
@@ -401,6 +423,46 @@ def clean_task_list():
                 if "SCAN" in autorx.task_list:
                     autorx.task_list["SCAN"]["task"].add_temporary_block(_key)
 
+            #Zigi
+            elif _exit_state == "Lockout":
+                # This task was a decoder, and it has encountered an locked-out sonde.
+                logging.info("Task Manager - Adding temporary lockout for frequency %.3f MHz" % (_key/1e6))
+                # Add the sonde's frequency to the global temporary block-list
+                temporary_block_list[_key] = time.time()
+                # If there is a scanner currently running, add it to the scanners internal block list.
+                if 'SCAN' in autorx.task_list:
+                    autorx.task_list['SCAN']['task'].add_temporary_block(_key)
+            elif _exit_state == "Brown":
+                # This task was a decoder, and it has encountered an locked-out sonde.
+                logging.info("Task Manager - Adding temporary lockout for frequency %.3f MHz" % (_key/1e6))
+                # Add the sonde's frequency to the global temporary block-list
+                temporary_block_list[_key] = time.time()-config['temporary_block_time']*60+60*60
+                # If there is a scanner currently running, add it to the scanners internal block list.
+                if 'SCAN' in autorx.task_list:
+                    autorx.task_list['SCAN']['task'].add_temporary_block(_key)
+            #Zigi
+            #elif _exit_state == "LIMIT":
+            # This task was a decoder, and it has encountered an locked-out sonde.
+            if (config['decode_limit_period']>0):
+                #logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
+                for attemptFreq in decode_attemp_dict.copy().keys():
+                    if np.abs(attemptFreq-_key)<(10000/2.0):
+                        decode_attemp_dict.pop(attemptFreq)
+                        #print("Reordering:" +str(attemptFreq))
+                decode_attemp_dict[_key]=time.time()
+                #print("Added:" +str(_key))
+                #print(decode_attemp_dict)      
+                    
+                #_index = np.argwhere(np.abs(np.array(detect_attemp_list)-_key)<(10000/2.0))
+                #detect_attemp_np = np.delete(detect_attemp_list, _index)
+                #detect_attemp_list = detect_attemp_np.tolist()
+                #detect_attemp_list.append(_key)
+                
+                #if len(detect_attemp_list) > config['max_peaks']: #self.max_peaks:
+                #    detect_attemp_list = detect_attemp_list[-config['max_peaks']:]
+                
+                #print("New detect_attemp_list:"+ str(np.array(detect_attemp_list)/1e6))
+       
             if _exit_state == "FAILED SDR":
                 # The SDR was not able to be recovered after many attempts.
                 # Remove it from the SDR list and flag an error.
@@ -423,6 +485,14 @@ def clean_task_list():
             autorx.task_list.pop(_key)
             # Indicate to the web client that the task list has been updated.
             flask_emit_event("task_event")
+
+    #Zigi
+    if (config['decode_limit_period']>0):
+        #logging.info("Task Manager - Storing frequency %.3f MHz" % (_key/1e6))
+        for attemptFreq in decode_attemp_dict.copy().keys():
+            if((time.time()-decode_attemp_dict[attemptFreq])>=((2*len(decode_attemp_dict.copy().keys())+1)*config['decode_limit_period']*60)):
+                decode_attemp_dict.pop(attemptFreq)
+                #print("Removing:" +str(attemptFreq))
 
     # Clean out the temporary block list of old entries.
     for _freq in temporary_block_list.copy().keys():
@@ -482,9 +552,12 @@ def telemetry_filter(telemetry):
 
     # First Check: zero lat/lon
     if (telemetry["lat"] == 0.0) and (telemetry["lon"] == 0.0):
+        est_alt_str = "Unknown"
+        if telemetry["pressure"] != -1:
+            est_alt_str = str(int((44331.5 - 4946.62 * (telemetry["pressure"] * 100) ** (0.190263)) * 1.09))
         logging.warning(
-            "Zero Lat/Lon. Sonde %s does not have GPS lock." % telemetry["id"]
-        )
+            "Zero Lat/Lon. Sonde %s does not have GPS lock. (Estimated barometric altitude: %s m)" % (telemetry["id"], est_alt_str)
+             )
         return False
 
     # Second check: Altitude cap.
@@ -499,9 +572,12 @@ def telemetry_filter(telemetry):
     # Third check: Number of satellites visible.
     if "sats" in telemetry:
         if telemetry["sats"] < 4:
+            est_alt_str = "Unknown"
+            if telemetry["pressure"] != -1:
+                est_alt_str = str(int((44331.5 - 4946.62 * (telemetry["pressure"] * 100) ** (0.190263)) * 1.09))
             logging.warning(
-                "Sonde %s can only see %d SVs - discarding position as bad."
-                % (telemetry["id"], telemetry["sats"])
+                "Sonde %s can only see %d SVs - discarding position as bad. (Estimated barometric altitude: %s m)"
+                % (telemetry["id"], telemetry["sats"], est_alt_str)
             )
             return False
 
