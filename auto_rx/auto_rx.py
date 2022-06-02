@@ -440,6 +440,25 @@ def clean_task_list():
                 # If there is a scanner currently running, add it to the scanners internal block list.
                 if 'SCAN' in autorx.task_list:
                     autorx.task_list['SCAN']['task'].add_temporary_block(_key)
+            
+            
+            if _exit_state == "FAILED SDR":
+                # The SDR was not able to be recovered after many attempts.
+                # Remove it from the SDR list and flag an error.
+                autorx.sdr_list.pop(_task_sdr)
+                _error_msg = (
+                    "Task Manager - Removed SDR %s from SDR list due to repeated failures."
+                    % (str(_task_sdr))
+                )
+                logging.error(_error_msg)
+
+                # Send email if configured.
+                email_error(_error_msg)
+
+            else:
+                # Release its associated SDR.
+                autorx.sdr_list[_task_sdr]["in_use"] = False
+                autorx.sdr_list[_task_sdr]["task"] = None
             #Zigi
             #elif _exit_state == "LIMIT":
             # This task was a decoder, and it has encountered an locked-out sonde.
@@ -463,23 +482,6 @@ def clean_task_list():
                 
                 #print("New detect_attemp_list:"+ str(np.array(detect_attemp_list)/1e6))
        
-            if _exit_state == "FAILED SDR":
-                # The SDR was not able to be recovered after many attempts.
-                # Remove it from the SDR list and flag an error.
-                autorx.sdr_list.pop(_task_sdr)
-                _error_msg = (
-                    "Task Manager - Removed SDR %s from SDR list due to repeated failures."
-                    % (str(_task_sdr))
-                )
-                logging.error(_error_msg)
-
-                # Send email if configured.
-                email_error(_error_msg)
-
-            else:
-                # Release its associated SDR.
-                autorx.sdr_list[_task_sdr]["in_use"] = False
-                autorx.sdr_list[_task_sdr]["task"] = None
 
             # Pop the task from the task list.
             autorx.task_list.pop(_key)
