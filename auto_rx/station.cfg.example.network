@@ -9,6 +9,7 @@
 # - [search_params] -> min_freq, max_freq - Set these suitable for your location!
 #
 
+
 ################
 # SDR SETTINGS #
 ################
@@ -24,7 +25,7 @@
 # KA9Q - Use a KA9Q SDR Server (Not yet implemented)
 # WARNING: These are still under development and may not work.
 #
-sdr_type = RTLSDR
+sdr_type = SpyServer
 
 
 #
@@ -37,7 +38,7 @@ sdr_type = RTLSDR
 # If SDR type is either KA9Q or SpyServer, this defines the maximum number of parallel
 # decoding/scan tasks. On a RPi 4, ~5 tasks are possible.
 #
-sdr_quantity = 1
+sdr_quantity = 5
 
 
 #
@@ -108,7 +109,8 @@ bias = False
 #	the sondes are often off-frequency. For now, check in something like GQRX to get an idea of what offset is required.
 #
 # Note - when using either a KA9Q or SpyServer as the SDR backend, the frequency scan limits are set by the
-# Server.
+# server and these settings are ignored. 
+# Refer https://github.com/projecthorus/radiosonde_auto_rx/wiki/Network-SDR-Decoding-Instructions
 
 min_freq = 400.05
 max_freq = 403.0
@@ -134,7 +136,6 @@ always_scan = []
 # List must be in the form: [[401.5,"RS41"], [402.5,"DFM"], [400.5,"M10"], [400.5,"IMET"]]
 # Valid sonde types: RS41, RS92, DFM, M10, M20, IMET, IMET5, MK2LMS, LMS6, MEISEI, MRZ, MTS01
 always_decode = []
-
 
 ####################
 # STATION LOCATION #
@@ -405,7 +406,6 @@ subject = <type> Sonde launch detected on <freq>: <id>
 # <id> - Sonde Serial Number (i.e. M1234567)
 nearby_landing_subject = Nearby Radiosonde Landing Detected - <id>
 
-
 ###################
 # ROTATOR CONTROL #
 ###################
@@ -451,7 +451,6 @@ save_system_log = False
 # This setting, in combination with save_system_log (above), can help provide detailed information when debugging
 # auto_rx operational issues.
 enable_debug_logging = False
-
 
 ###########################
 # WEB INTERFACE SETTINNGS #
@@ -535,7 +534,7 @@ quantization = 10000
 # If you regularly encounter radiosondes on adjacent (10kHz) channels, then set this value to 5000.
 decoder_spacing_limit = 15000
 # Temporary Block Time (minutes) - How long to block encrypted or otherwise non-decodable sondes for.
-temporary_block_time = 10
+temporary_block_time = 120
 # Upload when (seconds_since_utc_epoch%upload_rate) == 0. Otherwise just delay upload_rate seconds between uploads.
 # Setting this to True with multple uploaders should give a higher chance of all uploaders uploading the same frame,
 # however the upload_rate should not be set too low, else there may be a chance of missing upload slots.
@@ -584,8 +583,6 @@ lms6-1680_experimental = False
 # If someone can confirm that this works, I'll set it to True by default!
 mrz_experimental = False
 
-
-
 # Note: As iMet-4 sondes use AFSK, using fsk_demod does not give any advantage, so there is no experimental decoder for them.
 
 # Optimize 1680 MHz Scanning for RS92-NGP Sondes
@@ -622,27 +619,3 @@ radius_temporary_block = False
 # This helps catch glitches around 00Z UTC from iMet & LMS6 sondes, and bad CRC checks from
 # DFM sondes.
 sonde_time_threshold = 3
-
-#Block a frequency if a sonde is detected within a (hard-coded) area.
-geo_filter_enable = False
-#Max consecutive decoding period in minutes.
-decode_limit_period = 8
-#Do not limit decoding period below this altitute (meters).
-decode_limit_min_alt = 3000
-#Block a frequency after unsuccessfull iMet decoding.
-brownlist = [403.2755]
-#Block decoding of these sonde types.
-black_types = ["iMet"]
-#Block a new frequency after this much consecutive failing detect attempts.
-block_on_first_detect_fail_count = 8
-#Re-block a recently blocked frequency after this much consecutive failing detect attempts.
-block_on_detect_fail_count = 3
-#Time to block in case of consecutive detect attempts. Set to zero to disable.
-block_on_detect_fail_time = 20
-#Never auto-block these frequencies in case of failing detect attempts
-no_auto_block = [402.0,402.87,403.0,404.0,405.0,405.5,406.0]
-#Supress uploading of new IMet sonde in this polygon
-#imet_upload_filter_polygon_lat=[]
-#imet_upload_filter_polygon_lon=[]
-imet_upload_filter_polygon_lat=[32.986719, 32.920892, 32.915128, 32.960078, 33.31108, 33.371885, 33.313375, 33.324851, 33.290419, 33.14796, 33.129561, 33.115436, 33.141061, 33.156008, 33.159457, 33.100805]
-imet_upload_filter_polygon_lon=[35.079699, 35.618202, 35.925133, 35.952599, 35.846855, 35.779564, 35.620262, 35.563957, 35.500786, 35.470574, 35.417015, 35.383911, 35.341484, 35.254967, 35.161583, 35.105278]
