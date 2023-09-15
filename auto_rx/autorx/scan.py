@@ -1014,14 +1014,14 @@ class SondeScanner(object):
                 )
                 peak_frequencies = np.delete(peak_frequencies, _index)
 
-            # Limit to the user-defined number of peaks to search over.
-            if len(peak_frequencies) > self.max_peaks:
-                peak_frequencies = peak_frequencies[: self.max_peaks]
+            ## Limit to the user-defined number of peaks to search over.
+            #if len(peak_frequencies) > self.max_peaks:
+            #    peak_frequencies = peak_frequencies[: self.max_peaks]
 
-            # Append on any frequencies in the supplied always_scan list
-            peak_frequencies = np.append(
-                np.array(self.always_scan) * 1e6, peak_frequencies
-            )
+            ## Append on any frequencies in the supplied always_scan list
+            #peak_frequencies = np.append(
+            #    np.array(self.always_scan) * 1e6, peak_frequencies
+            #)
 
             # Remove any frequencies in the temporary block list
             self.temporary_block_list_lock.acquire()
@@ -1057,6 +1057,15 @@ class SondeScanner(object):
 
             self.temporary_block_list_lock.release()
 
+            # Limit to the user-defined number of peaks to search over.
+            if len(peak_frequencies) > self.max_peaks:
+                peak_frequencies = peak_frequencies[: self.max_peaks]
+
+            # Append on any frequencies in the supplied always_scan list
+            peak_frequencies = np.append(
+                np.array(self.always_scan) * 1e6, peak_frequencies
+            )
+            
             #Zigi
             if(self.enable_peak_reorder):
                 #Reorder list moving recently decoded frequencies to the end
