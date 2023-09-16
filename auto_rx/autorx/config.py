@@ -302,8 +302,9 @@ def read_auto_rx_config(filename, no_sdr_test=False):
         auto_rx_config['black_types'] = json.loads(config.get('filtering', 'black_types'))
         auto_rx_config['block_on_detect_fail_time'] = config.getint('filtering', 'block_on_detect_fail_time')
         auto_rx_config['block_on_detect_fail_count'] = config.getint('filtering', 'block_on_detect_fail_count')
-        auto_rx_config['block_on_first_detect_fail_count'] = config.getint('filtering', 'block_on_first_detect_fail_count')
+        auto_rx_config['block_on_first_detect_fail_count'] = config.getint('filtering', 'block_on_first_detect_fail_count')    
         auto_rx_config['no_auto_block'] = json.loads(config.get('filtering', 'no_auto_block'))
+        auto_rx_config['auto_block_min_band_width'] = config.getint('filtering', 'auto_block_min_band_width')
         auto_rx_config['imet_upload_filter_polygon_lat'] = json.loads(config.get('filtering', 'imet_upload_filter_polygon_lat'))
         auto_rx_config['imet_upload_filter_polygon_lon'] = json.loads(config.get('filtering', 'imet_upload_filter_polygon_lon'))
 

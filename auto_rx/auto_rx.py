@@ -196,6 +196,7 @@ def start_scanner():
             block_on_detect_fail_time = config['block_on_detect_fail_time'],
             block_on_detect_fail_count = config['block_on_detect_fail_count'],
             block_on_first_detect_fail_count = config['block_on_first_detect_fail_count'],
+            auto_block_min_band_width = config['auto_block_min_band_width'],
             temporary_block_list=temporary_block_list,
             temporary_block_time=config["temporary_block_time"],
         )

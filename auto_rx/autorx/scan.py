@@ -652,7 +652,8 @@ class SondeScanner(object):
         ngp_tweak = False,
         block_on_detect_fail_time = 0,
         block_on_detect_fail_count = 5,
-        block_on_first_detect_fail_count = 10
+        block_on_first_detect_fail_count = 10,
+        auto_block_min_band_width = 0
                  ):
         """Initialise a Sonde Scanner Object.
 
@@ -753,6 +754,7 @@ class SondeScanner(object):
         self.block_on_detect_fail_time = block_on_detect_fail_time
         self.block_on_detect_fail_count = block_on_detect_fail_count
         self.block_on_first_detect_fail_count = block_on_first_detect_fail_count
+        self.auto_block_min_band_width = auto_block_min_band_width
         # Alert the user if there are temporary blocks in place.
         if len(self.temporary_block_list.keys()) > 0:
             self.log_info(
@@ -1014,6 +1016,44 @@ class SondeScanner(object):
                 )
                 peak_frequencies = np.delete(peak_frequencies, _index)
 
+
+            #If configured, remove a band of censequtive peaks
+            #This list is ignores frequencies blocked, and is not sorted by power
+            peak_freq_quan = ( 
+                np.round(peak_freqs / self.quantization) * self.quantization
+            )
+            # Remove any duplicate entries after quantization, but preserve order.
+            _, peak_freq_idx = np.unique(peak_freq_quan, return_index=True)
+            peak_freq_quan = peak_freq_quan[np.sort(peak_freq_idx)]
+            
+            num_peaks = len(peak_freq_quan) 
+            #print(f"peak_freqs={peak_freq_quan}")
+            blocked_band=[]
+            if self.auto_block_min_band_width>0 and num_peaks>self.auto_block_min_band_width and num_peaks>1:  
+                conseq_list=[]
+                for idx in range(num_peaks-1):
+                    freq         = peak_freq_quan[idx+1]
+                    freq_minus_1 = peak_freq_quan[idx]
+                    
+                    if (freq-freq_minus_1)<=self.quantization:
+                        if len(conseq_list)==0:
+                           conseq_list.append(freq_minus_1) 
+                        conseq_list.append(freq)     
+                    else:
+                        if len(conseq_list)>=self.auto_block_min_band_width:
+                            blocked_band.extend(conseq_list)
+                            #print(F"Removing {
+                        conseq_list=[]
+    
+                    #print(F"freq_minus_1={freq_minus_1}, freq={freq}, conseq_list={conseq_list}")    
+                    
+                if len(conseq_list)>=self.auto_block_min_band_width:
+                    blocked_band.extend(conseq_list)
+                
+                blocked_band_array = np.array(blocked_band)
+                peak_frequencies = np.setdiff1d(peak_frequencies, blocked_band_array)
+                #print(F"blocked_band {blocked_band}")      
+
             ## Limit to the user-defined number of peaks to search over.
             #if len(peak_frequencies) > self.max_peaks:
             #    peak_frequencies = peak_frequencies[: self.max_peaks]
@@ -1128,7 +1168,7 @@ class SondeScanner(object):
                 return []
             else:
                 #self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
-                self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(actualBlockedPeakList/1e6)))
+                self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s. Band: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(actualBlockedPeakList/1e6), str(blocked_band_array/1e6)))
 
         else:
             # We have been provided a only_scan list - scan through the supplied frequencies.
