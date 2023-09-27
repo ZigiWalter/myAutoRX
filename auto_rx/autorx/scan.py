@@ -1036,9 +1036,10 @@ class SondeScanner(object):
                     freq_minus_1 = peak_freq_quan[idx]
                     
                     if (freq-freq_minus_1)<=self.quantization:
-                        if len(conseq_list)==0:
-                           conseq_list.append(freq_minus_1) 
-                        conseq_list.append(freq)     
+                        if len(conseq_list)==0 and freq_minus_1/1e6 not in self.no_fail_detect_auto_block_list:
+                           conseq_list.append(freq_minus_1)
+                        if freq/1e6 not in self.no_fail_detect_auto_block_list:
+                            conseq_list.append(freq)     
                     else:
                         if len(conseq_list)>=self.auto_block_min_band_width:
                             blocked_band.extend(conseq_list)
