@@ -1052,7 +1052,9 @@ class SondeScanner(object):
                     blocked_band.extend(conseq_list)
                 
                 blocked_band_array = np.array(blocked_band)
-                peak_frequencies = np.setdiff1d(peak_frequencies, blocked_band_array)
+                #peak_frequencies = np.setdiff1d(peak_frequencies, blocked_band_array)
+                peak_frequencies_tmp = np.array([el for el in peak_frequencies if el not in blocked_band_array])
+                peak_frequencies = peak_frequencies_tmp
                 #print(F"blocked_band {blocked_band}")      
 
             ## Limit to the user-defined number of peaks to search over.
