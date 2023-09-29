@@ -1171,6 +1171,7 @@ class SondeScanner(object):
                 return []
             else:
                 #self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(blockedPeakList)))
+                np.set_printoptions(linewidth=1000)
                 self.log_info("Detected peaks on %d frequencies (MHz): %s. Blocked: %s. Band: %s" % (len(peak_frequencies),str(peak_frequencies/1e6), str(actualBlockedPeakList/1e6), str(blocked_band_array/1e6)))
 
         else:
