@@ -42,6 +42,7 @@ VALID_SONDE_TYPES = [
     "MRZ",
     "MTS01",
     "UDP",
+    "WXR301"
 ]
 
 # Known 'Drifty' Radiosonde types
@@ -121,6 +122,7 @@ class SondeDecoder(object):
         "MRZ",
         "MTS01",
         "UDP",
+        "WXR301"
     ]
 
     def __init__(
@@ -151,7 +153,8 @@ class SondeDecoder(object):
         brownlist = [],
         black_types = [],
         imet_upload_filter_polygon = [],
-        save_raw_hex=False
+        save_raw_hex=False,
+        wideband_sondes=False
     ):
         """ Initialise and start a Sonde Decoder.
 
@@ -190,6 +193,7 @@ class SondeDecoder(object):
             rs41_drift_tweak (bool): If True, add a high-pass filter in the decode chain, which can improve decode performance on drifty SDRs.
             experimental_decoder (bool): If True, use the experimental fsk_demod-based decode chain.
             save_raw_hex (bool): If True, save the raw hex output from the decoder to a file.
+            wideband_sondes (bool): If True, use a wider bandwidth for iMet sondes. Does not affect settings for any other radiosonde types.
         """
         # Thread running flag
         self.decoder_running = True
@@ -226,6 +230,7 @@ class SondeDecoder(object):
         self.imet_upload_filter_polygon = Polygon(imet_upload_filter_polygon)
         self.save_raw_hex = save_raw_hex
         self.raw_file = None
+        self.wideband_sondes = wideband_sondes
 
         # Raw hex filename
         if self.save_raw_hex:
@@ -234,6 +239,9 @@ class SondeDecoder(object):
             self.raw_file_option = "-r"
         else:
             self.raw_file_option = ""
+
+        self.save_decode_iq_path = os.path.join(autorx.logging_path, f"decode_IQ_{self.sonde_freq}_{self.sonde_type}_{str(self.rtl_device_idx)}.raw")
+        self.save_decode_audio_path = os.path.join(autorx.logging_path, f"decode_audio_{self.sonde_freq}_{self.sonde_type}_{str(self.rtl_device_idx)}.wav")
 
         # iMet ID store. We latch in the first iMet ID we calculate, to avoid issues with iMet-1-RS units
         # which don't necessarily have a consistent packet count to time increment ratio.
@@ -410,7 +418,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_audio:
-                decode_cmd += " tee decode_%s.wav |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_audio_path} |"
 
             decode_cmd += "./rs41mod --ptu2 --json 2>/dev/null"
 
@@ -476,7 +484,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_audio:
-                decode_cmd += " tee decode_%s.wav |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_audio_path} |"
 
             decode_cmd += (
                 "./rs92mod -vx -v --crc --ecc --vel --json %s %s 2>/dev/null"
@@ -509,7 +517,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_audio:
-                decode_cmd += " tee decode_%s.wav |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_audio_path} |"
 
             # DFM decoder
             decode_cmd += "./dfm09mod -vv --ecc --json --dist --auto 2>/dev/null"
@@ -536,7 +544,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_audio:
-                decode_cmd += " tee decode_%s.wav |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_audio_path} |"
 
             # M10 decoder
             decode_cmd += "./m10mod --json --ptu -vvv 2>/dev/null"
@@ -544,7 +552,11 @@ class SondeDecoder(object):
         elif self.sonde_type == "IMET":
             # iMet-4 Sondes
 
-            _sample_rate = 48000
+            # These samples rates probably need to be revisited.
+            if self.wideband_sondes:
+                _sample_rate = 96000
+            else:
+                _sample_rate = 48000
 
             decode_cmd = get_sdr_iq_cmd(
                 sdr_type = self.sdr_type,
@@ -561,10 +573,15 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_iq:
-                decode_cmd += " tee decode_%s.raw |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
+
+            if self.wideband_sondes:
+                _wideband = "--imet1"
+            else:
+                _wideband = ""
 
             # iMet-4 (IMET1RS) decoder
-            decode_cmd += f"./imet4iq --iq 0.0 --lpIQ --dc - {_sample_rate} 16 --json 2>/dev/null"
+            decode_cmd += f"./imet4iq --iq 0.0 --lpIQ --dc - {_sample_rate} 16 --json {_wideband} 2>/dev/null"
 
         elif self.sonde_type == "IMET5":
             # iMet-54 Sondes
@@ -586,7 +603,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_iq:
-                decode_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
 
             # iMet-54 Decoder
             decode_cmd += (
@@ -613,7 +630,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_iq:
-                decode_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
 
             # MRZ decoder
             #decode_cmd += "./mp3h1mod --auto --json --ptu 2>/dev/null"
@@ -650,7 +667,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_iq:
-                decode_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
 
             # LMS6-1680 decoder
             decode_cmd += f"./mk2a1680mod --iq 0.0 --lpIQ --lpbw 160 --decFM --dc --crc --json {self.raw_file_option} - 240000 16 2>/dev/null"
@@ -687,7 +704,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_audio:
-                decode_cmd += " tee decode_%s.wav |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_audio_path} |"
 
             decode_cmd += "./lms6Xmod --json 2>/dev/null"
 
@@ -711,7 +728,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                decode_cmd += " tee decode_%s.raw |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
 
             # Meisei Decoder, in IQ input mode
             decode_cmd += f"./meisei100mod --IQ 0.0 --lpIQ --dc  - {_sample_rate} 16 --json --ptu --ecc 2>/dev/null"
@@ -736,10 +753,39 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                decode_cmd += " tee decode_%s.raw |" % str(self.rtl_device_idx)
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
 
             # Meteosis MTS01 decoder
             decode_cmd += f"./mts01mod --json --IQ 0.0 --lpIQ --dc - {_sample_rate} 16 2>/dev/null"
+
+
+        elif self.sonde_type == "WXR301":
+            # Weathex WxR-301D
+            
+            _sample_rate = 96000
+            _if_bw = 64
+
+            decode_cmd = get_sdr_iq_cmd(
+                sdr_type = self.sdr_type,
+                frequency = self.sonde_freq,
+                sample_rate = _sample_rate,
+                sdr_hostname = self.sdr_hostname,
+                sdr_port = self.sdr_port,
+                ss_iq_path = self.ss_iq_path,
+                rtl_device_idx = self.rtl_device_idx,
+                ppm = self.ppm,
+                gain = self.gain,
+                bias = self.bias
+            )
+
+            # Add in tee command to save IQ to disk if debugging is enabled.
+            if self.save_decode_iq:
+                decode_cmd += f" tee {self.save_decode_iq_path} |"
+
+            # WXR301, via iq_dec as a FM Demod.
+            decode_cmd += f"./iq_dec --FM --IFbw {_if_bw} --lpFM --wav --iq 0.0 - {_sample_rate} 16 2>/dev/null | ./weathex301d -b --json"
+
+
 
         elif self.sonde_type == "UDP":
             # UDP Input Mode.
@@ -800,7 +846,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -b %d -u %d -s --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -875,7 +921,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -b %d -u %d -s --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -926,7 +972,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -b %d -u %d -s --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -978,7 +1024,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += (
                 "./fsk_demod --cs16 -b %d -u %d -s -p %d --stats=%d 2 %d %d - -"
@@ -1020,7 +1066,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += (
                 "./fsk_demod --cs16 -b %d -u %d -s -p %d --stats=%d 2 %d %d - -"
@@ -1060,7 +1106,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -b %d -u %d -s --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -1101,7 +1147,7 @@ class SondeDecoder(object):
             )
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -b %d -u %d -s --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -1143,7 +1189,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -s -b %d -u %d --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -1189,7 +1235,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save audio to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             # LMS6-1680 decoder
             demod_cmd += f"./mk2a1680mod --iq 0.0 --lpIQ --lpbw 160 --lpFM --dc --crc --json {self.raw_file_option} - 220000 16 2>/dev/null"
@@ -1230,7 +1276,7 @@ class SondeDecoder(object):
 
             # Add in tee command to save IQ to disk if debugging is enabled.
             if self.save_decode_iq:
-                demod_cmd += " tee decode_IQ_%s.bin |" % str(self.rtl_device_idx)
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
 
             demod_cmd += "./fsk_demod --cs16 -s -b %d -u %d --stats=%d 2 %d %d - -" % (
                 _lower,
@@ -1244,6 +1290,50 @@ class SondeDecoder(object):
 
             # Meisei sondes transmit continuously - average over the last frame, and use a peak hold
             demod_stats = FSKDemodStats(averaging_time=1.0, peak_hold=True)
+            self.rx_frequency = self.sonde_freq
+
+        elif self.sonde_type == "WXR301":
+            # Weathex WxR-301D Sondes.
+
+            _baud_rate = 4800
+            _sample_rate = 96000
+
+            # Limit FSK estimator window to roughly +/- 40 kHz
+            _lower = -40000
+            _upper = 40000
+
+            demod_cmd = get_sdr_iq_cmd(
+                sdr_type = self.sdr_type,
+                frequency = self.sonde_freq,
+                sample_rate = _sample_rate,
+                sdr_hostname = self.sdr_hostname,
+                sdr_port = self.sdr_port,
+                ss_iq_path = self.ss_iq_path,
+                rtl_device_idx = self.rtl_device_idx,
+                ppm = self.ppm,
+                gain = self.gain,
+                bias = self.bias,
+                dc_block = True
+            )
+
+            # Add in tee command to save IQ to disk if debugging is enabled.
+            if self.save_decode_iq:
+                demod_cmd += f" tee {self.save_decode_iq_path} |"
+
+            # Trying out using the mask estimator here to reduce issues with interference
+            demod_cmd += "./fsk_demod --cs16 -s -b %d -u %d --mask 50000 --stats=%d 2 %d %d - -" % (
+                _lower,
+                _upper,
+                _stats_rate,
+                _sample_rate,
+                _baud_rate,
+            )
+
+            # Soft-decision decoding, inverted.
+            decode_cmd = f"./weathex301d --softin -i --json 2>/dev/null"
+
+            # Weathex sondes transmit continuously - average over the last frame, and use a peak hold
+            demod_stats = FSKDemodStats(averaging_time=5.0, peak_hold=True)
             self.rx_frequency = self.sonde_freq
 
         else:
@@ -1648,6 +1738,17 @@ class SondeDecoder(object):
                 _telemetry["datetime"] = _telemetry["datetime_dt"].strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
                 )
+
+            # Weathex Specific Actions
+            # Same datetime issues as with iMets, and LMS6
+            if self.sonde_type == "WXR301":
+                # Fix up the time.
+                _telemetry["datetime_dt"] = fix_datetime(_telemetry["datetime"])
+                # Re-generate the datetime string.
+                _telemetry["datetime"] = _telemetry["datetime_dt"].strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+
 
             # Grab a snapshot of modem statistics, if we are using an experimental decoder.
             if self.demod_stats is not None:
