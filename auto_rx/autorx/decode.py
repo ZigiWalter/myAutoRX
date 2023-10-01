@@ -1566,7 +1566,7 @@ class SondeDecoder(object):
                     est_alt_str = "Unknown"
                     if _telemetry["pressure"] != -1:
                         est_alt_str = str(int((44331.5 - 4946.62 * (_telemetry["pressure"] * 100) ** (0.190263)) * 1.09))
-                    self.log_error("iMet sonde has no GPS lock - discarding frame. (Estimated barometric altitude: %s m)" % est_alt_str)            
+                    self.log_error("iMet sonde has no GPS lock - discarding frame. (Estimated barometric altitude: %s m) Sat:%d" % (est_alt_str, _telemetry["sats"]))           
                     return False
 
                 # Fix up the time.
