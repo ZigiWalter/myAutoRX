@@ -1061,6 +1061,7 @@ class SondeScanner(object):
             num_peaks = len(peak_freq_quan) 
             #print(f"peak_freqs={peak_freq_quan}")
             blocked_band=[]
+            blocked_band_array = np.array([])
             if self.auto_block_min_band_width>0 and num_peaks>self.auto_block_min_band_width and num_peaks>1:  
                 conseq_list=[]
                 for idx in range(num_peaks-1):
