@@ -341,7 +341,11 @@ ozi_update_rate = 5
 # Note - this cannot be enabled in a multi-SDR configuration.
 ozi_enabled = False
 
-# OziMux UDP Broadcast output port.
+# OziMux UDP target host.
+# Defaults to broadcasting
+ozi_host = <broadcast>
+
+# OziMux UDP output port.
 # Set to 8942 to send packets directly into OziPlotter, or set to 55681 to send via OziMux
 ozi_port = 8942
 
@@ -349,6 +353,7 @@ ozi_port = 8942
 # Using this output allows multiple sondes to be plotted in Chasemapper.
 # As of 2019-05, this is enabled by default.
 payload_summary_enabled = True
+payload_summary_host = <broadcast>
 payload_summary_port = 55673
 
 
@@ -438,6 +443,9 @@ rotator_homing_delay = 10
 # Rotator home azimuth/elevation, in degrees true.
 rotator_home_azimuth = 0.0
 rotator_home_elevation = 0.0
+# Azimuth-only rotator - set this to True if your rotator only moves in Azimuth
+# This will force all elevation settings to 0
+azimuth_only = False
 
 
 ###########
@@ -663,3 +671,4 @@ auto_block_min_band_width = 5
 #imet_upload_filter_polygon_lon=[]
 imet_upload_filter_polygon_lat=[32.986719, 32.920892, 32.915128, 32.960078, 33.31108, 33.371885, 33.313375, 33.324851, 33.290419, 33.14796, 33.129561, 33.115436, 33.141061, 33.156008, 33.159457, 33.100805]
 imet_upload_filter_polygon_lon=[35.079699, 35.618202, 35.925133, 35.952599, 35.846855, 35.779564, 35.620262, 35.563957, 35.500786, 35.470574, 35.417015, 35.383911, 35.341484, 35.254967, 35.161583, 35.105278]
+
