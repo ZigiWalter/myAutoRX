@@ -127,6 +127,11 @@ class SondehubUploader(object):
             ),
         }
 
+        # Discard encrypted sonde data silently
+        if 'encrypted' in telemetry:
+            if telemetry['encrypted']:
+                return None
+
         # Mandatory Fields
         # Datetime
         try:
@@ -157,6 +162,16 @@ class SondehubUploader(object):
             _output["serial"] = telemetry["id"]
             if "subtype" in telemetry:
                 _output["subtype"] = telemetry["subtype"]
+
+        elif telemetry["type"] == "RD94":
+            _output["manufacturer"] = "Vaisala"
+            _output["type"] = "RD94"
+            _output["serial"] = telemetry["id"]
+
+        elif telemetry["type"] == "RD41":
+            _output["manufacturer"] = "Vaisala"
+            _output["type"] = "RD41"
+            _output["serial"] = telemetry["id"]
 
         elif telemetry["type"].startswith("DFM"):
             _output["manufacturer"] = "Graw"

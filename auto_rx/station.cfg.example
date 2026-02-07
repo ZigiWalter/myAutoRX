@@ -131,7 +131,7 @@ always_scan = []
 
 # always_decode - Always-running decoders. Only possible in a multi-SDR (or network-based SDR) system.
 # List must be in the form: [[401.5,"RS41"], [402.5,"DFM"], [400.5,"M10"], [400.5,"IMET"]]
-# Valid sonde types: RS41, RS92, DFM, M10, M20, IMET, IMET5, MK2LMS, LMS6, MEISEI, MRZ, MTS01
+# Valid sonde types: RS41, RS92, DFM, M10, M20, IMET, IMETWIDE, IMET5, MK2LMS, LMS6, MEISEI, MRZ, MTS01
 always_decode = []
 
 
@@ -553,6 +553,10 @@ quantization = 10000
 decoder_spacing_limit = 15000
 # Temporary Block Time (minutes) - How long to block encrypted or otherwise non-decodable sondes for.
 temporary_block_time = 10
+# Maximum Async Scan Workers - When using KA9Q-radio, how many concurrent detection tasks to run.
+# This only applies when sdr_type = KA9Q. Ignored for RTLSDRs (which scan sequentially).
+# Valid range: 1-32. Automatically capped at CPU core count. Default is 4 (conservative).
+max_async_scan_workers = 4
 # Upload when (seconds_since_utc_epoch%upload_rate) == 0. Otherwise just delay upload_rate seconds between uploads.
 # Setting this to True with multple uploaders should give a higher chance of all uploaders uploading the same frame,
 # however the upload_rate should not be set too low, else there may be a chance of missing upload slots.
@@ -617,6 +621,12 @@ ngp_tweak = False
 # be degradation in detection and decode performance. 
 wideband_sondes = False
 
+# Encrypted RS41-SGM handling:
+# When an encrypted RS41-SGM is detected:
+# True - auto_rx will close the decoder and lock-out the frequency for `temporary_block_time` minutes.
+# False - auto_rx will continue decoding this sonde, including writing a log file, but will not upload telemetry anywhere.
+# The default for this is True, as it can tie up SDRs un-necessarily. Not as big of an issue for a KA9Q-radio station.
+close_on_encrypted = True
 
 ######################
 # POSITION FILTERING #
@@ -670,4 +680,13 @@ auto_block_min_band_width = 5
 #imet_upload_filter_polygon_lon=[]
 imet_upload_filter_polygon_lat=[32.986719, 32.920892, 32.915128, 32.960078, 33.31108, 33.371885, 33.313375, 33.324851, 33.290419, 33.14796, 33.129561, 33.115436, 33.141061, 33.156008, 33.159457, 33.100805]
 imet_upload_filter_polygon_lon=[35.079699, 35.618202, 35.925133, 35.952599, 35.846855, 35.779564, 35.620262, 35.563957, 35.500786, 35.470574, 35.417015, 35.383911, 35.341484, 35.254967, 35.161583, 35.105278]
+
+# Whether to perform real-time velocity filtering
+# This filter calculates the velocity between the previous decoded telemetry frame and
+# newly received frames, and discards them if it is faster than the velocity configured below.
+# This helps discard the frame with invalid GPS data that DFM sondes transmit once per flight.
+enable_realtime_filter = True
+
+# Maximum velocity in metres per second for sondes to be discarded in the real-time filter
+max_velocity = 300
 
