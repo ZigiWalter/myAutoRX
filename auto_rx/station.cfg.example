@@ -118,7 +118,8 @@ rx_timeout = 180
 # Frequency Lists - These must be provided as JSON-compatible lists of floats (in MHz), i.e. [400.50, 401.520, 403.200]
 
 # only_scan - Add values to this list to *only* scan on these frequencies.
-# This is for when you only want to monitor a small set of launch frequencies.
+# This is for when you only want to monitor a small set of known launch frequencies.
+# If you specify entries in this list, spectrum scanning will be disabled.
 only_scan = []
 
 # never_scan - Any values added to this list will be removed from the list of detected peaks.
@@ -131,7 +132,7 @@ always_scan = []
 
 # always_decode - Always-running decoders. Only possible in a multi-SDR (or network-based SDR) system.
 # List must be in the form: [[401.5,"RS41"], [402.5,"DFM"], [400.5,"M10"], [400.5,"IMET"]]
-# Valid sonde types: RS41, RS92, DFM, M10, M20, IMET, IMETWIDE, IMET5, MK2LMS, LMS6, MEISEI, MRZ, MTS01
+# Valid sonde types: RS41, RS92, DFM, M10, M20, IMET, IMETWIDE, IMET5, MK2LMS, LMS6, MEISEI, MRZ, MTS01, WXR301
 always_decode = []
 
 
@@ -170,7 +171,7 @@ gpsd_port = 2947
 # SONDEHUB / HABITAT (deprecated) UPLOAD SETTINGS #
 ###################################################
 #
-# Settings relating to uploads to the SondeHub v2 Database and tracker,
+# Settings relating to uploads to the SondeHub Database and tracker,
 # available at https://tracker.sondehub.org/
 #
 # Note that uploads to the Habitat (amateur HAB) database are now disabled,
@@ -193,7 +194,7 @@ upload_listener_position = True
 uploader_antenna = 1/4 wave monopole
 
 [sondehub]
-# Enable uploading to Sondehub v2 - please leave this enabled!
+# Enable uploading to Sondehub - please leave this enabled!
 sondehub_enabled = True
 
 # How often to push data to the SondeHub Database. (seconds)
@@ -329,24 +330,8 @@ aprs_custom_comment = Clb=<vel_v> t=<temp> h=<humidity> p=<pressure> <freq> Type
 ###########################
 # CHASEMAPPER DATA OUTPUT #
 ###########################
-# Settings for pushing data into Chasemapper and/or OziPlotter
-# Oziplotter receives data via a basic CSV format, via UDP.
-# Chasemapper can receive data in either the basic CSV format, or in the more descriptive 'payload summary' JSON format.
+# Settings for pushing data into Chasemapper and other utilities
 [oziplotter]
-# How often to output data (seconds)
-ozi_update_rate = 5
-
-# Enable the 'OziMux' basic CSV output
-# Note - this cannot be enabled in a multi-SDR configuration.
-ozi_enabled = False
-
-# OziMux UDP target host.
-# Defaults to broadcasting
-ozi_host = <broadcast>
-
-# OziMux UDP output port.
-# Set to 8942 to send packets directly into OziPlotter, or set to 55681 to send via OziMux
-ozi_port = 8942
 
 # Payload summary UDP output, which is the preferred input if using ChaseMapper.
 # Using this output allows multiple sondes to be plotted in Chasemapper.
@@ -615,10 +600,10 @@ ngp_tweak = False
 
 # Wideband Radiosonde Detection:
 # Enables some tweaks to better handle detection and decoding of the following radiosonde types:
-# - Intermet iMet-1/4 (Wideband versions)
+# - Intermet iMet-1/4 (WIDEBAND VERSIONS ONLY - do NOT enable for regular iMets!)
 # - Weathex WxR-301d
-# If this is enabled in areas with 'narrowband' sondes as well (RS41, DFM, narrowband iMet, etc...) there will likely
-# be degradation in detection and decode performance. 
+# If this is enabled in areas with 'narrowband' sondes as well (RS41, DFM, 'regular' iMet, etc...) there WILL be
+# degradation in detection and decode performance. 
 wideband_sondes = False
 
 # Encrypted RS41-SGM handling:
@@ -627,6 +612,15 @@ wideband_sondes = False
 # False - auto_rx will continue decoding this sonde, including writing a log file, but will not upload telemetry anywhere.
 # The default for this is True, as it can tie up SDRs un-necessarily. Not as big of an issue for a KA9Q-radio station.
 close_on_encrypted = True
+
+# Exclude Specific Radiosonde types from detection:
+# Allows excluding particular radiosonde types from the detection stage.
+# Only modify this if you know what you're doing!
+# Valid type names that can be used in this list are:
+# DFM9,RS41,RS92,LMS6,IMET5,MK2LMS,M10,MEISEI,RD94RD41,MRZ,MTS01,CF6GTH,C34C50,WXR301,WXRPN9,IMET1AB,IMETafsk,IMET1RS,IMET4
+# Note that 'DFM9' covers all DFM sondes, and 'M10' covers M10 and M20 sondes.
+# Each entry must be wrapped in double-quotes (e.g. "C34C50")
+exclude_types = ["IMET1AB","C34C50"]
 
 ######################
 # POSITION FILTERING #
@@ -656,6 +650,15 @@ radius_temporary_block = False
 # DFM sondes.
 sonde_time_threshold = 3
 
+# Whether to perform real-time velocity filtering
+# This filter calculates the velocity between the previous decoded telemetry frame and
+# newly received frames, and discards them if it is faster than the velocity configured below.
+# This helps discard the frame with invalid GPS data that DFM sondes transmit once per flight.
+enable_realtime_filter = True
+
+# Maximum velocity in metres per second for sondes to be discarded in the real-time filter
+max_velocity = 300
+
 #Block a frequency if a sonde is detected within a (hard-coded) area.
 geo_filter_enable = False
 #Max consecutive decoding period in minutes.
@@ -680,13 +683,3 @@ auto_block_min_band_width = 5
 #imet_upload_filter_polygon_lon=[]
 imet_upload_filter_polygon_lat=[32.986719, 32.920892, 32.915128, 32.960078, 33.31108, 33.371885, 33.313375, 33.324851, 33.290419, 33.14796, 33.129561, 33.115436, 33.141061, 33.156008, 33.159457, 33.100805]
 imet_upload_filter_polygon_lon=[35.079699, 35.618202, 35.925133, 35.952599, 35.846855, 35.779564, 35.620262, 35.563957, 35.500786, 35.470574, 35.417015, 35.383911, 35.341484, 35.254967, 35.161583, 35.105278]
-
-# Whether to perform real-time velocity filtering
-# This filter calculates the velocity between the previous decoded telemetry frame and
-# newly received frames, and discards them if it is faster than the velocity configured below.
-# This helps discard the frame with invalid GPS data that DFM sondes transmit once per flight.
-enable_realtime_filter = True
-
-# Maximum velocity in metres per second for sondes to be discarded in the real-time filter
-max_velocity = 300
-

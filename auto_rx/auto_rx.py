@@ -39,7 +39,7 @@ if sys.version_info < (3, 6):
 
 import autorx
 from autorx.scan import SondeScanner
-from autorx.decode import SondeDecoder, VALID_SONDE_TYPES, DRIFTY_SONDE_TYPES
+from autorx.decode import SondeDecoder, VALID_SONDE_TYPES
 from autorx.logger import TelemetryLogger
 from autorx.email_notification import EmailNotification
 from autorx.aprs import APRSUploader
@@ -198,9 +198,10 @@ def start_scanner():
             block_on_detect_fail_count = config['block_on_detect_fail_count'],
             block_on_first_detect_fail_count = config['block_on_first_detect_fail_count'],
             auto_block_min_band_width = config['auto_block_min_band_width'],
+            wideband_sondes=config["wideband_sondes"],
+            exclude_types=config["exclude_types"],
             temporary_block_list=temporary_block_list,
             temporary_block_time=config["temporary_block_time"],
-            wideband_sondes=config["wideband_sondes"],
             max_async_scan_workers=config["max_async_scan_workers"],
         )
 
@@ -385,9 +386,12 @@ def handle_scan_results():
                         if _decoding_sonde_type.startswith("-"):
                             _decoding_sonde_type = _decoding_sonde_type[1:]
 
-                        # Only check the frequency spacing if we have a known 'drifty' sonde type, *and* the new sonde type is of the same type.
-                        if (_decoding_sonde_type in DRIFTY_SONDE_TYPES) and (
-                            _decoding_sonde_type == _check_type
+                        # Check if the adjacent sonde is the same type
+                        #.. or possible a M10/M20 misdetection
+                        if (
+                            (_decoding_sonde_type == _check_type) or 
+                            (_decoding_sonde_type == 'M20' and _check_type == 'M10') or
+                            (_decoding_sonde_type == 'M10' and _check_type == 'M20')
                         ):
                             if abs(_key - _freq) < config["decoder_spacing_limit"]:
                                 # At this point, we can be pretty sure that there is another decoder already decoding this particular sonde ID.
@@ -465,7 +469,7 @@ def clean_task_list():
         if _running == False:
             # This task has stopped.
             # Check the exit state of the task for any abnormalities:
-            if (_exit_state == "Encrypted") or (_exit_state == "TempBlock"):
+            if (_exit_state == "Encrypted") or (_exit_state == "TempBlock") or (_exit_state == "Duplicate"):
                 # This task was a decoder, and it has encountered an encrypted sonde, or one too far away.
                 logging.info(
                     "Task Manager - Adding temporary block for frequency %.3f MHz"
@@ -778,6 +782,12 @@ def telemetry_filter(telemetry):
     else:
         dropsonde_callsign_valid = False
 
+    # C50 Sondes can also start with a blank serial numnber
+    if "C50" in telemetry['type']:
+        c50_callsign_valid = "x" not in _serial.split("-")[1]
+    else:
+        c50_callsign_valid = False
+
     # If Vaisala or DFMs, check the callsigns are valid. If M10/M20, iMet, MTS01 or LMS6, just pass it through - we get callsigns immediately and reliably from these.
     if (
         vaisala_callsign_valid
@@ -785,12 +795,15 @@ def telemetry_filter(telemetry):
         or meisei_callsign_valid
         or mrz_callsign_valid
         or dropsonde_callsign_valid
+        or c50_callsign_valid
         or ("M10" in telemetry["type"])
         or ("M20" in telemetry["type"])
         or ("LMS" in telemetry["type"])
         or ("IMET" in telemetry["type"])
         or ("MTS01" in telemetry["type"])
         or ("WXR" in telemetry["type"])
+        or ("CF6" in telemetry["type"])
+        or ("GTH" in telemetry["type"])
     ):
         return "OK"
     else:
@@ -871,7 +884,7 @@ def main():
         "--type",
         type=str,
         default=None,
-        help="Immediately start a decoder for a provided sonde type (Valid Types: RS41, RS92, DFM, M10, M20, IMET, IMETWIDE, IMET5, LMS6, MK2LMS, MEISEI, MRZ, RD94RD41)",
+        help="Immediately start a decoder for a provided sonde type (Valid Types: RS41, RS92, DFM, M10, M20, IMET, IMETWIDE, IMET5, LMS6, MK2LMS, MEISEI, MRZ, RD94RD41, SRSC50, CF6GTH)",
     )
     parser.add_argument(
         "-t",
@@ -1101,18 +1114,8 @@ def main():
         exporter_objects.append(_aprs)
         exporter_functions.append(_aprs.add)
 
-    # OziExplorer
-    if config["ozi_enabled"] or config["payload_summary_enabled"]:
-        if config["ozi_host"]:
-            _ozi_host = config["ozi_host"]
-        else:
-            _ozi_host = None
-
-        if config["ozi_enabled"]: # Causes port to be set to None which disables the export.
-            _ozi_port = config["ozi_port"]
-        else:
-            _ozi_port = None
-
+    # Payload Summary output (Chasemapper)
+    if config["payload_summary_enabled"]:
         if config["payload_summary_host"]:
             _summary_host = config["payload_summary_host"]
         else:
@@ -1124,11 +1127,8 @@ def main():
             _summary_port = None
 
         _ozimux = OziUploader(
-            ozimux_host=_ozi_host,
-            ozimux_port=_ozi_port,
             payload_summary_host=_summary_host,
             payload_summary_port=_summary_port,
-            update_rate=config["ozi_update_rate"],
             station=config["habitat_uploader_callsign"],
         )
 
