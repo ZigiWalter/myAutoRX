@@ -64,7 +64,7 @@ class OziUploader(object):
         self.payload_summary_port = payload_summary_port
         self.update_rate = update_rate
         self.station = station
-        self.last_update_time = 0
+        self.last_update_time = time.monotonic()
         self.latest_telemetry = None
 
         # Input Queue.
