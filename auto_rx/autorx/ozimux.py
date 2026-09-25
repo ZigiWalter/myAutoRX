@@ -57,6 +57,9 @@ class OziUploader(object):
             update_rate (int): Time in seconds between payload summary updates.
         """
 
+        if update_rate <= 0:
+            raise ValueError("update_rate must be greater than zero")
+
         self.payload_summary_host = payload_summary_host
         self.payload_summary_port = payload_summary_port
         self.update_rate = update_rate

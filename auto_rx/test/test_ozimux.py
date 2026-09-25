@@ -35,6 +35,10 @@ def wait_for(condition, timeout=2.0):
 
 
 class TestOziUploader(unittest.TestCase):
+    def test_payload_summary_requires_positive_update_rate(self):
+        with self.assertRaises(ValueError):
+            OziUploader(payload_summary_port=55672, update_rate=0)
+
     def test_payload_summary_throttles_and_keeps_latest(self):
         sent = []
         original_send = OziUploader.send_payload_summary
