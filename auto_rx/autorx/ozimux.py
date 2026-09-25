@@ -45,6 +45,7 @@ class OziUploader(object):
         self,
         payload_summary_host="<broadcast>",
         payload_summary_port=None,
+        update_rate=5,
         station="auto_rx",
     ):
         """ Initialise an OziUploader Object.
@@ -52,11 +53,15 @@ class OziUploader(object):
         Args:
             payload_summary_host (str): UDP host to push payload summary messages to.
             payload_summary_port (int): UDP port to push payload summary messages to. Set to None to disable.
+            update_rate (int): Time in seconds between payload summary updates.
         """
 
         self.payload_summary_host = payload_summary_host
         self.payload_summary_port = payload_summary_port
+        self.update_rate = update_rate
         self.station = station
+        self.last_update_time = 0
+        self.latest_telemetry = None
 
         # Input Queue.
         self.input_queue = Queue()
@@ -159,11 +164,14 @@ class OziUploader(object):
             if self.input_queue.qsize() > 0:
                 # Dump the queue, keeping the most recent element.
                 while not self.input_queue.empty():
-                    _telem = self.input_queue.get()
+                    self.latest_telemetry = self.input_queue.get()
 
-                    # Send every packet as a payload summary.
+            if self.latest_telemetry is not None:
+                if (time.time() - self.last_update_time) >= self.update_rate:
                     if self.payload_summary_port != None:
-                        self.send_payload_summary(_telem)
+                        self.send_payload_summary(self.latest_telemetry)
+                    self.last_update_time = time.time()
+                    self.latest_telemetry = None
 
             time.sleep(0.5)
 

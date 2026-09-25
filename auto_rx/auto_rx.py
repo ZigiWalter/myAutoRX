@@ -1129,6 +1129,7 @@ def main():
         _ozimux = OziUploader(
             payload_summary_host=_summary_host,
             payload_summary_port=_summary_port,
+            update_rate=config["payload_summary_update_rate"],
             station=config["habitat_uploader_callsign"],
         )
 

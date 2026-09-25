@@ -156,6 +156,7 @@ def read_auto_rx_config(filename, no_sdr_test=False):
         "payload_summary_enabled": False,
         "payload_summary_host": "<broadcast>",
         "payload_summary_port": 55672,
+        "payload_summary_update_rate": 5,
         # Debugging settings
         "save_detection_audio": False,
         "save_decode_audio": False,
@@ -356,6 +357,9 @@ def read_auto_rx_config(filename, no_sdr_test=False):
         )
         auto_rx_config["payload_summary_port"] = config.getint(
             "oziplotter", "payload_summary_port"
+        )
+        auto_rx_config["payload_summary_update_rate"] = config.getint(
+            "oziplotter", "payload_summary_update_rate"
         )
 
         # Advanced Settings
