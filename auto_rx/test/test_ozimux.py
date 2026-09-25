@@ -40,21 +40,24 @@ class TestOziUploader(unittest.TestCase):
         original_send = OziUploader.send_payload_summary
 
         def fake_send(self, telemetry):
-            sent.append(telemetry["frame"])
+            sent.append((telemetry["frame"], time.time()))
 
         OziUploader.send_payload_summary = fake_send
         uploader = OziUploader(payload_summary_port=55672, update_rate=0.2)
 
         try:
             uploader.add(sample_telemetry(1))
-            self.assertTrue(wait_for(lambda: sent == [1]))
+            self.assertTrue(wait_for(lambda: len(sent) == 1))
+            self.assertEqual(sent[0][0], 1)
 
             uploader.add(sample_telemetry(2))
             uploader.add(sample_telemetry(3))
 
-            self.assertTrue(wait_for(lambda: sent == [1, 3]))
+            self.assertTrue(wait_for(lambda: len(sent) == 2))
+            self.assertEqual([entry[0] for entry in sent], [1, 3])
+            self.assertGreaterEqual(sent[1][1] - sent[0][1], 0.18)
             time.sleep(0.3)
-            self.assertEqual(sent, [1, 3])
+            self.assertEqual([entry[0] for entry in sent], [1, 3])
         finally:
             uploader.close()
             OziUploader.send_payload_summary = original_send

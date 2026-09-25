@@ -40,6 +40,7 @@ class OziUploader(object):
 
     # Extra fields we can pass on to other programs.
     EXTRA_FIELDS = ["bt", "humidity", "pressure", "sats", "batt", "snr", "fest", "f_centre", "ppm", "subtype", "sdr_device_idx", "vel_v", "vel_h", "aux"]
+    MINIMUM_SLEEP = 0.05
 
     def __init__(
         self,
@@ -173,7 +174,7 @@ class OziUploader(object):
                     self.last_update_time = time.time()
                     self.latest_telemetry = None
 
-            time.sleep(0.5)
+            time.sleep(max(min(self.update_rate, 0.5), self.MINIMUM_SLEEP))
 
     def add(self, telemetry):
         """ Add a dictionary of telemetry to the input queue. 
