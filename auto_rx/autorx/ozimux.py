@@ -174,11 +174,11 @@ class OziUploader(object):
                     break
 
             if self.latest_telemetry is not None:
-                _time_since_update = time.time() - self.last_update_time
+                _time_since_update = time.monotonic() - self.last_update_time
                 if _time_since_update >= self.update_rate:
                     if self.payload_summary_port != None:
                         self.send_payload_summary(self.latest_telemetry)
-                    self.last_update_time = time.time()
+                    self.last_update_time = time.monotonic()
                     self.latest_telemetry = None
                 else:
                     _sleep_time = max(
