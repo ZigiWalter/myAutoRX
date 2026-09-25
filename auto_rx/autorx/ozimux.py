@@ -10,7 +10,7 @@ import json
 import logging
 import socket
 import time
-from queue import Queue
+from queue import Empty, Queue
 from threading import Thread
 
 
@@ -166,10 +166,12 @@ class OziUploader(object):
         while self.input_processing_running:
             _sleep_time = max(min(self.update_rate, 0.5), self.MINIMUM_SLEEP)
 
-            if self.input_queue.qsize() > 0:
-                # Dump the queue, keeping the most recent element.
-                while not self.input_queue.empty():
-                    self.latest_telemetry = self.input_queue.get()
+            # Dump the queue, keeping the most recent element.
+            while True:
+                try:
+                    self.latest_telemetry = self.input_queue.get_nowait()
+                except Empty:
+                    break
 
             if self.latest_telemetry is not None:
                 _time_since_update = time.time() - self.last_update_time
