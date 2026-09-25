@@ -164,6 +164,7 @@ class OziUploader(object):
         """
 
         while self.input_processing_running:
+            _sleep_time = max(min(self.update_rate, 0.5), self.MINIMUM_SLEEP)
 
             if self.input_queue.qsize() > 0:
                 # Dump the queue, keeping the most recent element.
@@ -171,13 +172,19 @@ class OziUploader(object):
                     self.latest_telemetry = self.input_queue.get()
 
             if self.latest_telemetry is not None:
-                if (time.time() - self.last_update_time) >= self.update_rate:
+                _time_since_update = time.time() - self.last_update_time
+                if _time_since_update >= self.update_rate:
                     if self.payload_summary_port != None:
                         self.send_payload_summary(self.latest_telemetry)
                     self.last_update_time = time.time()
                     self.latest_telemetry = None
+                else:
+                    _sleep_time = max(
+                        min(self.update_rate - _time_since_update, 0.5),
+                        self.MINIMUM_SLEEP,
+                    )
 
-            time.sleep(max(min(self.update_rate, 0.5), self.MINIMUM_SLEEP))
+            time.sleep(_sleep_time)
 
     def add(self, telemetry):
         """ Add a dictionary of telemetry to the input queue. 
