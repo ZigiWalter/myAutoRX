@@ -156,6 +156,7 @@ def read_auto_rx_config(filename, no_sdr_test=False):
         "payload_summary_enabled": False,
         "payload_summary_host": "<broadcast>",
         "payload_summary_port": 55672,
+        "payload_summary_update_rate": 5,
         # Debugging settings
         "save_detection_audio": False,
         "save_decode_audio": False,
@@ -357,6 +358,16 @@ def read_auto_rx_config(filename, no_sdr_test=False):
         auto_rx_config["payload_summary_port"] = config.getint(
             "oziplotter", "payload_summary_port"
         )
+        auto_rx_config["payload_summary_update_rate"] = config.getfloat(
+            "oziplotter",
+            "payload_summary_update_rate",
+            fallback=auto_rx_config["payload_summary_update_rate"],
+        )
+        if auto_rx_config["payload_summary_update_rate"] <= 0:
+            logging.warning(
+                "Config - payload_summary_update_rate must be greater than zero, using default (5)."
+            )
+            auto_rx_config["payload_summary_update_rate"] = 5
 
         # Advanced Settings
         auto_rx_config["search_step"] = config.getfloat("advanced", "search_step")

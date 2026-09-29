@@ -10,7 +10,7 @@ import json
 import logging
 import socket
 import time
-from queue import Queue
+from queue import Empty, Queue
 from threading import Thread
 
 
@@ -40,11 +40,13 @@ class OziUploader(object):
 
     # Extra fields we can pass on to other programs.
     EXTRA_FIELDS = ["bt", "humidity", "pressure", "sats", "batt", "snr", "fest", "f_centre", "ppm", "subtype", "sdr_device_idx", "vel_v", "vel_h", "aux"]
+    MINIMUM_SLEEP = 0.05
 
     def __init__(
         self,
         payload_summary_host="<broadcast>",
         payload_summary_port=None,
+        update_rate=5,
         station="auto_rx",
     ):
         """ Initialise an OziUploader Object.
@@ -52,11 +54,18 @@ class OziUploader(object):
         Args:
             payload_summary_host (str): UDP host to push payload summary messages to.
             payload_summary_port (int): UDP port to push payload summary messages to. Set to None to disable.
+            update_rate (int): Time in seconds between payload summary updates.
         """
+
+        if update_rate <= 0:
+            raise ValueError("update_rate must be greater than zero")
 
         self.payload_summary_host = payload_summary_host
         self.payload_summary_port = payload_summary_port
+        self.update_rate = update_rate
         self.station = station
+        self.last_update_time = time.monotonic()
+        self.latest_telemetry = None
 
         # Input Queue.
         self.input_queue = Queue()
@@ -155,17 +164,29 @@ class OziUploader(object):
         """
 
         while self.input_processing_running:
+            _sleep_time = max(min(self.update_rate, 0.5), self.MINIMUM_SLEEP)
 
-            if self.input_queue.qsize() > 0:
-                # Dump the queue, keeping the most recent element.
-                while not self.input_queue.empty():
-                    _telem = self.input_queue.get()
+            # Dump the queue, keeping the most recent element.
+            while True:
+                try:
+                    self.latest_telemetry = self.input_queue.get_nowait()
+                except Empty:
+                    break
 
-                    # Send every packet as a payload summary.
+            if self.latest_telemetry is not None:
+                _time_since_update = time.monotonic() - self.last_update_time
+                if _time_since_update >= self.update_rate:
                     if self.payload_summary_port != None:
-                        self.send_payload_summary(_telem)
+                        self.send_payload_summary(self.latest_telemetry)
+                    self.last_update_time = time.monotonic()
+                    self.latest_telemetry = None
+                else:
+                    _sleep_time = max(
+                        min(self.update_rate - _time_since_update, 0.5),
+                        self.MINIMUM_SLEEP,
+                    )
 
-            time.sleep(0.5)
+            time.sleep(_sleep_time)
 
     def add(self, telemetry):
         """ Add a dictionary of telemetry to the input queue. 
